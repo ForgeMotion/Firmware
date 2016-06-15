@@ -1,0 +1,29 @@
+iOS dev meeting 1.19
+
+From Julian's UI:
+	(needs to be redesigned)
+	connect button says "no device"
+	click -> popup to scanning -> select device
+	select -> button is green and says "ok"
+
+	how to know what device is yours
+	what if only one device
+		do not auto connect, in case someone else's vest or another ble nano device
+		force to pick from list.
+
+pressing connection button disconnects (done!)
+disconnect when closing app
+
+
+
+
+other notes:
+	when pressing load, if disconnected, doScan() to try to connect
+
+setting the name inside the firmware:
+	ios will pull both the CFG_GAP_LOCAL_NAME and the SHORTENED_LOCAL_NAME, but the CFG_GAP_LOCAL_NAME takes priority
+	CFG_GAP_LOCAL_NAME is a #def to a string, which is really annoying, since you can't variably change a #def. 
+	need to auto generate keys and generate the gap name
+	ergo, change library to use gap name as a property? or auto generate config files?
+
+	the example android app uses the shortened_local_name though!n
