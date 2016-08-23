@@ -1,0 +1,69 @@
+ToDo.
+	New module enclosure
+	New motor/speaker enclosures
+
+	Refactor main code
+
+	Audio
+x		Access flash memory
+x		How to program the flash memory in factory
+		Run RawHardwareTest and debug until it passes
+
+		Volume Control
+			Detect/debounce buttons
+			Ability to control digipot
+			Adjust volume through digipot vs internal gain
+			Linearize sound pressure in software as needed
+
+		Sound files
+			"Welcome to Swing Forge. Preparing system."
+			"Your vest calibration is complete."
+			Chime at the back swing limit
+			Beep for the volume noise
+			Chime2 at end of swing - cycle through phrases? have a "great job" for swings with a low number of errors?
+			Low battery
+
+	Double tap on accelerometer to start the swing
+		Update to latest dev library
+			Move fixed Euler angle function
+			Add other added functions (normalize?)
+		Detect tap reliably
+
+	Trigger extra motors
+
+	Battery life function
+	Shutdown function
+
+	Reduce motion calibration to under 15 seconds
+
+
+
+	Test iOS
+		See what the data from the app looks like
+		learn how to program the ble module
+		Pass data through BLE to Teensy
+		Teensy detects new profile and goes into uploading mode
+			Blinking blue LED
+		Sets parameters
+		"Settings updated" Audio
+
+
+
+	
+
+
+	UI!
+
+	Fabric button for the power switch
+	The button responds by vibrating gently, like a cat’s purr when he is awakened.
+	The vibration comes in two short spurts, indicating the vest is ready and awake.
+	Intro message
+	As soon as the intro message is complete, all the vibration motors in the vest vibrate in a “vibration symphony” to create the sensation that the body has been scanned.
+	Once calibration is complete, the vest stops vibrating and tells the user: “Your vest calibration is complete”.
+
+	Double tap to start swing, vibration/chime to signal starting swing, position feedback starts right away. Chime at full backswing
+	Single tap to exit swing
+	Solid green LED while running
+	Blinking blue LED while data upload
+	Orange breathing LED while idle
+	Red flash in between breaths for low battery

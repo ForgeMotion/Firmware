@@ -1,0 +1,24 @@
+Dev notes 8.22
+
+PCB
+	Footprint for digipot is way off
+	Don't need test pads for SPI
+	make a nicer jtag pin pattern
+
+Audio
+	Filenames are always uppercase 8.3 format
+	Looks like files will can be raw, or mp3 if mp3 library is added
+	Need to look at memory consumption once its running and alloc only what's needed
+
+	Ok, we're going to use the SerialFlash library, which has an audio to DAQ example (MP3Player.ino)
+	It also has a python script to send data to the teensy, and a sketch to pass the data onto the flash chip (CopyFromSerial.ino)
+
+Tap Detection
+	It looks like we got access to the library from Invensense (MotionDriver 6.1) which has commands for all of the features, and there's Arm 32 bit example code. 
+	I can implement this library by defining the appropriate I2C commands.. This should all be tested on a normal teensy and mpu-605 breakout.
+	Good news: you can detect taps in only particular directions (e.g. Z backwards), you can set it to only trigger when 2 (or 1 or 3 or 4) taps are detected, and you can adjust the threshold and timing.
+	Adding the library to the code folder.
+
+	Definitely should be using the latest MPU-6050 library from the "develop" (testing) branch. It has a lot of fixes. Going to merge in my Euler angle and other fixes locally. 
+
+	Also, the MPU calibration code that someone wrote a while ago, someone figured out the bugs and posted about it. Saving a current version and then I'll build in their changes and test it. 
