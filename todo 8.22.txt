@@ -67,3 +67,8 @@ x		How to program the flash memory in factory
 	Blinking blue LED while data upload
 	Orange breathing LED while idle
 	Red flash in between breaths for low battery
+
+
+
+Down the line:
+	MPU calibration values get stored in eeprom, and then read from eeprom at boot and sent to IMU (or just make IMU save them?)
