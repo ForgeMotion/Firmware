@@ -1,6 +1,7 @@
 // Simple MP3 file player example
 //
 // https://forum.pjrc.com/threads/27059-MP3-Player-Lib-with-example?p=101537&viewfull=1#post101537
+
 //
 // Requires the prop-shield and Teensy 3.2 or 3.1
 // This example code is in the public domain.
@@ -8,7 +9,7 @@
 #include <Audio.h>
 #include <Wire.h>
 #include <SPI.h>
-#include <SD.h>
+//#include <SD.h>
 #include <SerialFlash.h>
 #include <play_sd_mp3.h> // https://github.com/FrankBoesing/Arduino-Teensy-Codec-lib
 //#include <play_sd_aac.h>
@@ -25,9 +26,13 @@ AudioConnection          patchCord3(mixer1, dac1);
 // GUItool: end automatically generated code
 
 
-#define FLASH_CHIP_SELECT  10 // Only on Red PCB
+#define FLASH_CHIP_SELECT  8 // 10 on Red PCB, 8 on Yellow
 
 void setup() {
+  Serial.begin(115200);
+  while(!Serial);
+  
+  // allocates memory
   AudioMemory(8);
   delay(2000);
 

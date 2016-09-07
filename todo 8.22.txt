@@ -7,13 +7,13 @@ ToDo.
 	Audio
 x		Access flash memory
 x		How to program the flash memory in factory
-		Run RawHardwareTest and debug until it passes
+x		Run RawHardwareTest and debug until it passes (inside SerialFlash lib examples)
 
 		Volume Control
-			Detect/debounce buttons
-			Ability to control digipot
-			Adjust volume through digipot vs internal gain
-			Linearize sound pressure in software as needed
+x			Detect/debounce buttons (Just use regular bounce library)
+x			Ability to control digipot (added tested working code 9.5)
+x			Linearize sound pressure in software as needed (now done in HW - 2nd red pcb rev)
+			Adjust volume through digipot
 
 		Sound files
 			"Welcome to Swing Forge. Preparing system."
@@ -22,6 +22,19 @@ x		How to program the flash memory in factory
 			Beep for the volume noise
 			Chime2 at end of swing - cycle through phrases? have a "great job" for swings with a low number of errors?
 			Low battery
+			Shutting down
+
+		Implement in primary code
+			On wakeup
+			On complete calibration
+			On back swing complete
+			On full swing complete
+			Low battery
+			Shutting down
+
+			Changing volume up/down
+			Tune volume up/down speed
+
 
 	Double tap on accelerometer to start the swing
 		Update to latest dev library
@@ -34,7 +47,7 @@ x		How to program the flash memory in factory
 	Battery life function
 	Shutdown function
 
-	Reduce motion calibration to under 15 seconds
+x	Reduce motion calibration to under 15 seconds
 
 
 

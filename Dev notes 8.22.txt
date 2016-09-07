@@ -13,6 +13,10 @@ Audio
 	Ok, we're going to use the SerialFlash library, which has an audio to DAQ example (MP3Player.ino)
 	It also has a python script to send data to the teensy, and a sketch to pass the data onto the flash chip (CopyFromSerial.ino)
 
+	Got successful erase and read/write from flash memory - for yellow PCB, had to add following to both erase and r/w examples:
+		SPI.setMOSI(11);
+		SPI.setMISO(12);
+
 Tap Detection
 	It looks like we got access to the library from Invensense (MotionDriver 6.1) which has commands for all of the features, and there's Arm 32 bit example code. 
 	I can implement this library by defining the appropriate I2C commands.. This should all be tested on a normal teensy and mpu-605 breakout.
