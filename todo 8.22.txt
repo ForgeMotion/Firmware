@@ -1,4 +1,12 @@
 ToDo.
+	Today, 9/8: 
+		tap detection from IMU, finish motion updates
+
+		add 33ohm resistors to USB
+		test serial output
+		test amp hardware
+
+
 	New module enclosure
 	New motor/speaker enclosures
 
@@ -14,6 +22,21 @@ x			Detect/debounce buttons (Just use regular bounce library)
 x			Ability to control digipot (added tested working code 9.5)
 x			Linearize sound pressure in software as needed (now done in HW - 2nd red pcb rev)
 			Adjust volume through digipot
+
+		Amp Hardware
+			Wire two speakers in series (8ohm) and confirm impedance
+			Test DAC output (sine wave with dc offset)
+			Test DAC signal after DC blocking cap (0V center)
+			Test DAC signal while adjusting digitpot (shifting magnitude, 0V center)
+				Check if feedback should go from in+ to out-
+				Check if one audio channel is at 0V
+			Plug in speakers and test audio
+				Store a test file in spi flash
+				Output into speakers
+				Change volume
+			Draw finalize schematics
+			Update dev notes about audio schematic
+
 
 		Sound files
 			"Welcome to Swing Forge. Preparing system."
