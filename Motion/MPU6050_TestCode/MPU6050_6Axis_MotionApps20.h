@@ -688,12 +688,23 @@ uint8_t MPU6050::dmpGetGravity(VectorFloat *v, Quaternion *q) {
 // uint8_t MPU6050::dmpGetExternalSensorData(long *data, int size, const uint8_t* packet);
 // uint8_t MPU6050::dmpGetEIS(long *data, const uint8_t* packet);
 
+#ifdef USE_OLD_DMPGETEULER
+// Gives left handed intrinsic X-Y'-Z''
 uint8_t MPU6050::dmpGetEuler(float *data, Quaternion *q) {
     data[0] = atan2(2*q -> x*q -> y - 2*q -> w*q -> z, 2*q -> w*q -> w + 2*q -> x*q -> x - 1);   // psi
     data[1] = -asin(2*q -> x*q -> z + 2*q -> w*q -> y);                              // theta
     data[2] = atan2(2*q -> y*q -> z - 2*q -> w*q -> x, 2*q -> w*q -> w + 2*q -> z*q -> z - 1);   // phi
     return 0;
 }
+#else
+// Revised function: Gives right handed extrinsic X-Y-Z (same as intrinsic Z-Y'-X'')
+uint8_t MPU6050::dmpGetEuler(float *data, Quaternion *q) {
+    data[0] = atan2(2 * (q->x * q->y + q->w * q->z), 2 * (q->w * q->w + q->x * q->x) - 1);
+    data[1] = -asin(-2 * (q->x * q->z - q->w * q->y));
+    data[2] = atan2(2 * (q->y * q->z + q->w * q->x), 2 * (q->w * q->w + q->z * q->z) - 1);
+    return 0;
+}
+#endif
 
 #ifdef USE_OLD_DMPGETYAWPITCHROLL
 uint8_t MPU6050::dmpGetYawPitchRoll(float *data, Quaternion *q, VectorFloat *gravity) {

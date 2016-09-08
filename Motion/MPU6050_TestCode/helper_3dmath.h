@@ -70,6 +70,10 @@ class Quaternion {
             return Quaternion(w, -x, -y, -z);
         }
         
+        float getNorm() {
+            return w*w + x*x + y*y + z*z;
+        }
+        
         float getMagnitude() {
             return sqrt(w*w + x*x + y*y + z*z);
         }
