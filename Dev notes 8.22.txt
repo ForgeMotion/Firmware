@@ -18,11 +18,17 @@ Audio
 		SPI.setMISO(12);
 
 Tap Detection
-	It looks like we got access to the library from Invensense (MotionDriver 6.1) which has commands for all of the features, and there's Arm 32 bit example code. 
-	I can implement this library by defining the appropriate I2C commands.. This should all be tested on a normal teensy and mpu-605 breakout.
-	Good news: you can detect taps in only particular directions (e.g. Z backwards), you can set it to only trigger when 2 (or 1 or 3 or 4) taps are detected, and you can adjust the threshold and timing.
-	Adding the library to the code folder.
+	See Tap detection dev notes 9.8.c
 
-	Definitely should be using the latest MPU-6050 library from the "develop" (testing) branch. It has a lot of fixes. Going to merge in my Euler angle and other fixes locally. 
+Merging MPU6050 library changes:
+	The MPU calibration code that someone wrote a while ago, someone figured out the bugs and posted about it. Saving a current version and then I'll build in their changes and test it. (done)
 
-	Also, the MPU calibration code that someone wrote a while ago, someone figured out the bugs and posted about it. Saving a current version and then I'll build in their changes and test it. 
+	Latest lib uses MPU6050_DMP_FIFO_RATE_DIVISOR to set dmp read frequency (f = 200Hz/(1+MPU6050_DMP_FIFO_RATE_DIVISOR)), I used MPU6050_DMP_FIFO_RATE_DIVISOR = 0x03 in last version, so that will need to be in the new main code
+	Added in the proper euler equation, using an ifdef for a quick reversion
+	Added in the getNorm function (unsure if it was ever used)
+
+
+Full System factory calibration
+	The hardware test sketch needs to be updated
+	it should get calibration values for the IMU and save them to eeprom
+	main code should pull them from eeprom on boot

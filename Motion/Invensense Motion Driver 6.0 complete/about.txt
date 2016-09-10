@@ -1,0 +1,10 @@
+Found this on github: https://github.com/tdwebste/invensense_driver_6.0
+
+From "App Note 3 = Motion Driver 6.1 Porting Guide.pdf":
+7 Motion Driver 6.0 Firmware Package
+The Motion Driver 6.0 release firmware contains the following folders:
+	core\driver : This folder contains the InvenSense drivers layer for the MPU devices as well as the MCU specific drivers
+	simple_apps\msp430\mllite_test.c or src\main.c : The main function and main loop for the project application. Customers can use this code as a reference to integrate the driver functions into their project.
+	core\mllite : This folder contains the MPL data processing functions that store the received sensor data and processes the data.
+	core\mpl : Contains the InvenSense Proprietary MPL library – a library containing advanced algorithms for sensor fusion and run-time calibrations.
+	core\eMPL-hal : This folder contains the files that provide same the sensor data conversion such as linear acceleration.
