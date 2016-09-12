@@ -1,28 +1,21 @@
-/*====================================================================
-The MIT License (MIT)
+/* To Do
+ *  Detect taps
+ *  Disable accel/gyro from fifo - speeds up i2c transactions
+ *  The dmp_read_fifo function returns number of packets left
+ *  Use "more" to represent data ready?
 
-Copyright (c) 2014 Johan Gummesson
+Tap is working! Dir = 6 count = number before max time
+ Tap settings: 
+        dmp_set_tap_thresh(TAP_XYZ, 250);
+        dmp_set_tap_axes(TAP_XYZ);
+        dmp_set_tap_count(1);
+        dmp_set_tap_time(100);
+        dmp_set_tap_time_multi(500);
 
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
-
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-====================================================================*/
-
+        dmp_set_shake_reject_thresh(GYRO_SF, 200);
+        dmp_set_shake_reject_time(40);
+        dmp_set_shake_reject_timeout(10);
+*/
 #include <Wire.h>
 #include "I2Cdev.h"
 #include "inv_mpu.h"
@@ -37,6 +30,9 @@ Quaternion currentQuat, initPos;
 bool initSet = false;
 float YPRdev[] = {0.0, 0.0, 0.0};
 unsigned long timestamp = 0, lastTimestamp = 0;
+
+short sensors;
+uint8_t more;
 
 void setup()
 {
@@ -74,6 +70,8 @@ void loop(){
         Serial.println();
     }
     if(initSet && timestamp != lastTimestamp){
+        lastTimestamp = timestamp;
+        
         getYPRDev(&initPos,&currentQuat,YPRdev);
         
         Serial.print("Deviation from init position: ");
@@ -82,12 +80,15 @@ void loop(){
         Serial.print(YPRdev[1]);
         Serial.print(", ");
         Serial.print(YPRdev[2]);
+        Serial.print(", sensors = 0b");
+        Serial.print(sensors, BIN);
+        Serial.print(", more = 0b");
+        Serial.print(more, BIN);
         Serial.println();
     }
     
     if (mpuDataReady){
-        short gyro[3], accel[3], sensors;
-        uint8_t more;
+        short gyro[3], accel[3];
         int ret;
 
         long quat[4];
@@ -143,6 +144,15 @@ void initMPU(){
                                      | DMP_FEATURE_TAP);
     dmp_set_fifo_rate(MPU_HZ);
     mpu_set_dmp_state(1);
+    dmp_register_tap_cb(tap_cb);
+}
+
+void tap_cb(unsigned char dir, unsigned char count){
+    Serial.print("Tap detected! Direction: ");
+    Serial.print(dir);
+    Serial.print(" count: ");
+    Serial.print(count);
+    Serial.println();
 }
 
 /*

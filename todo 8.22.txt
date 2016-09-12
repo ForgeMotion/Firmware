@@ -61,9 +61,10 @@ x		Update to latest dev library
 x			Move fixed Euler angle function
 x			Add other added functions (normalize?)
 x		Port MotionDriver 6.12 Library
-		Implement fixed Euler angle function
-		Implement tap detection
+x		Implement fixed Euler angle function
+x		Implement tap detection
 		Tune tap thresholds and timing
+		Implement calibration code in new library
 
 	Trigger extra motors
 
@@ -108,3 +109,4 @@ x	Reduce motion calibration to under 15 seconds
 
 Down the line:
 	MPU calibration values get stored in eeprom, and then read from eeprom at boot and sent to IMU (or just make IMU save them?)
+	make all of the data types in the new imu library consistent
