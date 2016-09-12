@@ -27,11 +27,16 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "I2Cdev.h"
 #include "inv_mpu.h"
 #include "inv_mpu_dmp_motion_driver.h"
+#include "quaternionMath.h"
 
 #define MPU_HZ 50
 
 const uint8_t mpuInterruptPin = 0;
 volatile bool mpuDataReady = false;
+Quaternion currentQuat, initPos;
+bool initSet = false;
+float YPRdev[] = {0.0, 0.0, 0.0};
+unsigned long timestamp = 0, lastTimestamp = 0;
 
 void setup()
 {
@@ -40,7 +45,7 @@ void setup()
     Serial.begin(115200);
     while(!Serial);
 
-    Serial.println("Starting; LED turns off when init complete.");
+    Serial.println("Starting; LED turns off when init complete (has quat lib).");
 
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, HIGH);
@@ -54,30 +59,53 @@ void setup()
 }
 
 void loop(){
+    if(millis() > 30000 && !initSet){
+        initPos = currentQuat;
+        initSet = true;
+
+        Serial.print("Initial position set: ");
+        Serial.print(initPos.w,9);
+        Serial.print("\t");
+        Serial.print(initPos.x,9);
+        Serial.print("\t");
+        Serial.print(initPos.y,9);
+        Serial.print("\t");
+        Serial.print(initPos.z,9);
+        Serial.println();
+    }
+    if(initSet && timestamp != lastTimestamp){
+        getYPRDev(&initPos,&currentQuat,YPRdev);
+        
+        Serial.print("Deviation from init position: ");
+        Serial.print(YPRdev[0]);
+        Serial.print(", ");
+        Serial.print(YPRdev[1]);
+        Serial.print(", ");
+        Serial.print(YPRdev[2]);
+        Serial.println();
+    }
+    
     if (mpuDataReady){
-        short gyro[3], accel[3];
-        unsigned long timestamp;
-        unsigned char more;
+        short gyro[3], accel[3], sensors;
+        uint8_t more;
         int ret;
 
         long quat[4];
-        float quaternion[4];
-        short sensors;
 
         if (0 == (ret = dmp_read_fifo(gyro, accel, quat, &timestamp, &sensors, &more))){
-            if (!more)
-                mpuDataReady = false;
-                
-            for(int i=0; i<4; i++)
-                quaternion[i] = float(quat[i]);
+            if (!more) mpuDataReady = false;
 
-            quatLongToFloat(quat, quaternion);
-            
-            for(int i=0; i<4; i++){
-                Serial.print(quaternion[i],9);
-                if(i<3) Serial.print("\t");
+            longArrayToQuat(quat, &currentQuat);
+            if(!initSet){
+                Serial.print(currentQuat.w,9);
+                Serial.print("\t");
+                Serial.print(currentQuat.x,9);
+                Serial.print("\t");
+                Serial.print(currentQuat.y,9);
+                Serial.print("\t");
+                Serial.print(currentQuat.z,9);
+                Serial.println();
             }
-            Serial.println();
         }
         else{
             Serial.print("Error: ");
@@ -90,9 +118,11 @@ static void mpuInterrupt(){
     mpuDataReady = true;
 }
 
-void quatLongToFloat(long *quatIn, float *quatOut){
-    for(int i=0; i<4; i++)
-      quatOut[i] = float(quatIn[i])/0x40000000;
+void longArrayToQuat(long *input, Quaternion *quat){
+    quat->w = float(input[0])/0x40000000;
+    quat->x = float(input[1])/0x40000000;
+    quat->y = float(input[2])/0x40000000;
+    quat->z = float(input[3])/0x40000000;
 }
 
 
@@ -116,21 +146,6 @@ void initMPU(){
 }
 
 /*
-
-void normalizeQuat(float *quat){    
-    float length = sqrt(quat[0] * quat[0] + quat[1] * quat[1] +  
-        quat[1] * quat[1] + quat[1] * quat[1]);
-
-    if (length == 0)
-        return;
-
-    for(int i=0; i<4; i++)
-        quat[i] /= length;
-}
-
- char _orientation[9] = { 1, 0, 0,
-                          0, 1, 0,
-                          0, 0, 1 };
 void initMPUwDebug(){
     int ret;
 
@@ -165,7 +180,7 @@ void initMPUwDebug(){
         Serial.println(ret);
     }
 
-    if (0 != (ret = dmp_set_orientation(matrixToScalar(_orientation)))){
+    if (0 != (ret = dmp_set_orientation(0X88))){ // {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}} orientation matrix
         Serial.print("Failed to set orientation: ");
         Serial.println(ret);
     }
@@ -192,37 +207,6 @@ void initMPUwDebug(){
     Serial.println("DONE!!!");
 }
 
-
-unsigned short rowToScale(const char *row){
-    unsigned short b;
-
-    if (row[0] > 0)
-        b = 0;
-    else if (row[0] < 0)
-        b = 4;
-    else if (row[1] > 0)
-        b = 1;
-    else if (row[1] < 0)
-        b = 5;
-    else if (row[2] > 0)
-        b = 2;
-    else if (row[2] < 0)
-        b = 6;
-    else
-        b = 7;
-
-    return b;
-}
-
-unsigned short matrixToScalar(const char *mtx){
-    unsigned short scalar;
-
-    scalar = rowToScale(mtx);
-    scalar |= rowToScale(mtx + 3) << 3;
-    scalar |= rowToScale(mtx + 6) << 6;
-
-    return scalar;
-}
 
 void printMPUValues(){
     unsigned short ushortValue;
