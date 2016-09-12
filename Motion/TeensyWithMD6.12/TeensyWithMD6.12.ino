@@ -28,116 +28,115 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "inv_mpu.h"
 #include "inv_mpu_dmp_motion_driver.h"
 
-#define QUAT_W 0
-#define QUAT_X 1
-#define QUAT_Y 2
-#define QUAT_Z 3
-
-#define VEC_X 0
-#define VEC_Y 1
-#define VEC_Z 2
-
-#define PIN_D0 0
-
 #define MPU_HZ 50
-#define USE_DMP 1
 
-volatile unsigned char _dataReady = 0;
+const uint8_t mpuInterruptPin = 0;
+volatile bool mpuDataReady = false;
 
-char _orientation[9] = { 1, 0, 0,
-                         0, 1, 0,
-                         0, 0, 1 };
 void setup()
 {
+    Wire.begin();
+
     Serial.begin(115200);
     while(!Serial);
 
-    Wire.begin();
-    delay(500);
-
-    Serial.println("Starting");
+    Serial.println("Starting; LED turns off when init complete.");
 
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, HIGH);
 
+//     initMPUwDebug();
     initMPU();
 
-    _dataReady = 0;
+    mpuDataReady = false;
 
     digitalWrite(LED_BUILTIN, LOW);
 }
 
 void loop(){
-    if (_dataReady){
+    if (mpuDataReady){
         short gyro[3], accel[3];
         unsigned long timestamp;
         unsigned char more;
         int ret;
 
-        if (USE_DMP){
-            long quat[4];
-            float quaternion[4];
-            short sensors;
+        long quat[4];
+        float quaternion[4];
+        short sensors;
 
-            if (0 == (ret = dmp_read_fifo(gyro, accel, quat, &timestamp, &sensors, &more))){
-                if (!more){
-                    _dataReady = 0;
-                }
+        if (0 == (ret = dmp_read_fifo(gyro, accel, quat, &timestamp, &sensors, &more))){
+            if (!more)
+                mpuDataReady = false;
+                
+            for(int i=0; i<4; i++)
+                quaternion[i] = float(quat[i]);
 
-                quaternion[QUAT_W] = (float)quat[QUAT_W];
-                quaternion[QUAT_X] = (float)quat[QUAT_X];
-                quaternion[QUAT_Y] = (float)quat[QUAT_Y];
-                quaternion[QUAT_Z] = (float)quat[QUAT_Z];
-
-                normalizeQuat(quaternion);
-
-                Serial.print(quaternion[QUAT_W]); Serial.print(";");
-                Serial.print(quaternion[QUAT_X]); Serial.print(";");
-                Serial.print(quaternion[QUAT_Y]); Serial.print(";");
-                Serial.print(quaternion[QUAT_Z]);Serial.print("\t");
-
-                Serial.print(gyro[VEC_X]);Serial.print(";");
-                Serial.print(gyro[VEC_Y]);Serial.print(";");
-                Serial.print(gyro[VEC_Z]);Serial.print("\t");
-
-                Serial.print(accel[VEC_X]);Serial.print(";");
-                Serial.print(accel[VEC_Y]);Serial.print(";");
-                Serial.println(accel[VEC_Z]);
+            quatLongToFloat(quat, quaternion);
+            
+            for(int i=0; i<4; i++){
+                Serial.print(quaternion[i],9);
+                if(i<3) Serial.print("\t");
             }
-            else{
-                Serial.print("Error: ");Serial.println(ret);
-            }
-
+            Serial.println();
         }
-        else {
-            unsigned char sensors;
-
-            if (0 == (ret = mpu_read_fifo(gyro, accel, &timestamp, &sensors, &more))){
-                if (!more){
-                    _dataReady = 0;
-                }
-
-                Serial.print(gyro[VEC_X]);Serial.print(";");
-                Serial.print(gyro[VEC_Y]);Serial.print(";");
-                Serial.print(gyro[VEC_Z]);Serial.print("\t");
-
-                Serial.print(accel[VEC_X]);Serial.print(";");
-                Serial.print(accel[VEC_Y]);Serial.print(";");
-                Serial.println(accel[VEC_Z]);
-            }
-            else{
-                Serial.print("Error: ");Serial.println(ret);
-            }
+        else{
+            Serial.print("Error: ");
+            Serial.println(ret);
         }
     }
 }
 
+static void mpuInterrupt(){
+    mpuDataReady = true;
+}
+
+void quatLongToFloat(long *quatIn, float *quatOut){
+    for(int i=0; i<4; i++)
+      quatOut[i] = float(quatIn[i])/0x40000000;
+}
+
+
+
 void initMPU(){
+    struct int_param_s int_param;
+    int_param.cb = mpuInterrupt;
+    int_param.pin = mpuInterruptPin;
+
+    mpu_init(&int_param);
+    mpu_set_sensors(INV_XYZ_GYRO | INV_XYZ_ACCEL);
+    mpu_configure_fifo(INV_XYZ_GYRO | INV_XYZ_ACCEL);
+    mpu_set_sample_rate(MPU_HZ);
+    dmp_load_motion_driver_firmware();
+    dmp_set_orientation(0x88); // {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}} orientation matrix
+    dmp_enable_feature(DMP_FEATURE_6X_LP_QUAT | DMP_FEATURE_SEND_RAW_ACCEL 
+                                     | DMP_FEATURE_SEND_CAL_GYRO | DMP_FEATURE_GYRO_CAL 
+                                     | DMP_FEATURE_TAP);
+    dmp_set_fifo_rate(MPU_HZ);
+    mpu_set_dmp_state(1);
+}
+
+/*
+
+void normalizeQuat(float *quat){    
+    float length = sqrt(quat[0] * quat[0] + quat[1] * quat[1] +  
+        quat[1] * quat[1] + quat[1] * quat[1]);
+
+    if (length == 0)
+        return;
+
+    for(int i=0; i<4; i++)
+        quat[i] /= length;
+}
+
+ char _orientation[9] = { 1, 0, 0,
+                          0, 1, 0,
+                          0, 0, 1 };
+void initMPUwDebug(){
     int ret;
 
     struct int_param_s int_param;
-    int_param.cb = dataReadyCallback;
-    int_param.pin = PIN_D0;
+    int_param.cb = mpuInterrupt;
+    int_param.pin = mpuInterruptPin;
 
     Serial.println("Init MPU");
 
@@ -183,7 +182,7 @@ void initMPU(){
         Serial.println(ret);
     }
 
-    if (0 != (ret = mpu_set_dmp_state(USE_DMP))){
+    if (0 != (ret = mpu_set_dmp_state(1))){
         Serial.print("Failed to set DMP state: ");
         Serial.println(ret);
     }
@@ -193,9 +192,6 @@ void initMPU(){
     Serial.println("DONE!!!");
 }
 
-static void dataReadyCallback(){
-    _dataReady = 1;
-}
 
 unsigned short rowToScale(const char *row){
     unsigned short b;
@@ -234,36 +230,32 @@ void printMPUValues(){
     float floatValue;
 
     mpu_get_accel_fsr(&ucharValue);
-    Serial.print("Accel full-scale range rate: ");Serial.println(ucharValue);
+    Serial.print("Accel full-scale range rate: ");
+    Serial.println(ucharValue);
 
     mpu_get_accel_sens(&ushortValue);
-    Serial.print("Accel sensitivity: ");Serial.println(ushortValue);
+    Serial.print("Accel sensitivity: ");
+    Serial.println(ushortValue);
 
     mpu_get_gyro_fsr(&ushortValue);
-    Serial.print("Gyro full-scale range rate: ");Serial.println(ushortValue);
+    Serial.print("Gyro full-scale range rate: ");
+    Serial.println(ushortValue);
 
     mpu_get_gyro_sens(&floatValue);
-    Serial.print("Gyro sensitivity: ");Serial.println(floatValue);
+    Serial.print("Gyro sensitivity: ");
+    Serial.println(floatValue);
 
     mpu_get_lpf(&ushortValue);
-    Serial.print("DLPF: ");Serial.println(ushortValue);
+    Serial.print("DLPF: ");
+    Serial.println(ushortValue);
 
     dmp_get_fifo_rate(&ushortValue);
-    Serial.print("FIFO rate: ");Serial.println(ushortValue);
+    Serial.print("FIFO rate: ");
+    Serial.println(ushortValue);
 
     mpu_get_sample_rate(&ushortValue);
-    Serial.print("Sample rate: ");Serial.println(ushortValue);
+    Serial.print("Sample rate: ");
+    Serial.println(ushortValue);
 }
 
-void normalizeQuat(float *quat){
-    float length = sqrt(quat[QUAT_W] * quat[QUAT_W] + quat[QUAT_X] * quat[QUAT_X] +  
-        quat[QUAT_Y] * quat[QUAT_Y] + quat[QUAT_Z] * quat[QUAT_Z]);
-
-    if (length == 0)
-        return;
-
-    quat[QUAT_W] /= length;
-    quat[QUAT_X] /= length;
-    quat[QUAT_Y] /= length;
-    quat[QUAT_Z] /= length;
-}
+*/

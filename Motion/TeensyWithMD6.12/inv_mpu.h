@@ -55,8 +55,8 @@ struct int_param_s {
     void (*cb)(volatile void*);
     void *arg;
 #elif defined __MK20DX256__
-    void (*cb)(void);
-    unsigned short pin;
+    void (*cb)(void); // Callback from interrupt
+    unsigned short pin; // Interrupt pin
 #endif
 };
 

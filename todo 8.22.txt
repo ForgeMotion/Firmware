@@ -1,11 +1,8 @@
 ToDo.
-	Today, 9/8: 
-		tap detection from IMU, finish motion updates
-
+	Friday, 9/9: 
 		add 33ohm resistors to USB
 		test serial output
 		test amp hardware
-
 
 	New module enclosure
 	New motor/speaker enclosures
@@ -60,10 +57,13 @@ x			Linearize sound pressure in software as needed (now done in HW - 2nd red pcb
 
 
 	Double tap on accelerometer to start the swing
-		Update to latest dev library
-			Move fixed Euler angle function
-			Add other added functions (normalize?)
-		Detect tap reliably
+x		Update to latest dev library
+x			Move fixed Euler angle function
+x			Add other added functions (normalize?)
+x		Port MotionDriver 6.12 Library
+		Implement fixed Euler angle function
+		Implement tap detection
+		Tune tap thresholds and timing
 
 	Trigger extra motors
 

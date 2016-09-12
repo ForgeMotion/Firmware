@@ -476,7 +476,7 @@ static const unsigned short sStartAddress = 0x0400;
 
 #define FIFO_CORRUPTION_CHECK
 #ifdef FIFO_CORRUPTION_CHECK
-#define QUAT_ERROR_THRESH       (1L<<24)
+#define QUAT_ERROR_THRESH       0x28F5C2 // +/- 1%
 #define QUAT_MAG_SQ_NORMALIZED  (1L<<28)
 #define QUAT_MAG_SQ_MIN         (QUAT_MAG_SQ_NORMALIZED - QUAT_ERROR_THRESH)
 #define QUAT_MAG_SQ_MAX         (QUAT_MAG_SQ_NORMALIZED + QUAT_ERROR_THRESH)
@@ -1321,6 +1321,7 @@ int dmp_read_fifo(short *gyro, short *accel, long *quat,
             quat_q14[2] * quat_q14[2] + quat_q14[3] * quat_q14[3];
         if ((quat_mag_sq < QUAT_MAG_SQ_MIN) ||
             (quat_mag_sq > QUAT_MAG_SQ_MAX)) {
+            Serial.println("Quat from sensor wasn't normalized = I2C error, resetting data!");
             /* Quaternion is outside of the acceptable threshold. */
             mpu_reset_fifo();
             sensors[0] = 0;
