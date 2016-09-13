@@ -34,8 +34,7 @@ unsigned long timestamp = 0, lastTimestamp = 0;
 short sensors;
 uint8_t more;
 
-void setup()
-{
+void setup(){
     Wire.begin();
 
     Serial.begin(115200);
@@ -46,8 +45,13 @@ void setup()
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, HIGH);
 
-//     initMPUwDebug();
+    // initMPUwDebug();
     initMPU();
+    dmp_set_tap_thresh(TAP_Z, 250);
+    dmp_set_tap_axes(TAP_Z);
+    dmp_set_tap_count(2);
+    // dmp_set_tap_time(100);
+    // dmp_set_tap_time_multi(500);
 
     mpuDataReady = false;
 
