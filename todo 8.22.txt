@@ -1,4 +1,9 @@
 ToDo.
+	Friday, 9/9: 
+		add 33ohm resistors to USB
+		test serial output
+		test amp hardware
+
 	New module enclosure
 	New motor/speaker enclosures
 
@@ -14,6 +19,21 @@ x			Detect/debounce buttons (Just use regular bounce library)
 x			Ability to control digipot (added tested working code 9.5)
 x			Linearize sound pressure in software as needed (now done in HW - 2nd red pcb rev)
 			Adjust volume through digipot
+
+		Amp Hardware
+			Wire two speakers in series (8ohm) and confirm impedance
+			Test DAC output (sine wave with dc offset)
+			Test DAC signal after DC blocking cap (0V center)
+			Test DAC signal while adjusting digitpot (shifting magnitude, 0V center)
+				Check if feedback should go from in+ to out-
+				Check if one audio channel is at 0V
+			Plug in speakers and test audio
+				Store a test file in spi flash
+				Output into speakers
+				Change volume
+			Draw finalize schematics
+			Update dev notes about audio schematic
+
 
 		Sound files
 			"Welcome to Swing Forge. Preparing system."
@@ -37,10 +57,14 @@ x			Linearize sound pressure in software as needed (now done in HW - 2nd red pcb
 
 
 	Double tap on accelerometer to start the swing
-		Update to latest dev library
-			Move fixed Euler angle function
-			Add other added functions (normalize?)
-		Detect tap reliably
+x		Update to latest dev library
+x			Move fixed Euler angle function
+x			Add other added functions (normalize?)
+x		Port MotionDriver 6.12 Library
+x		Implement fixed Euler angle function
+x		Implement tap detection
+		Tune tap thresholds and timing
+		Implement calibration code in new library
 
 	Trigger extra motors
 
@@ -85,3 +109,4 @@ x	Reduce motion calibration to under 15 seconds
 
 Down the line:
 	MPU calibration values get stored in eeprom, and then read from eeprom at boot and sent to IMU (or just make IMU save them?)
+	make all of the data types in the new imu library consistent
