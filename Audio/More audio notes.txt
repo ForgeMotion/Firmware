@@ -1,0 +1,102 @@
+More audio notes
+Looking at stereo stuff:
+	Maxim has no digital input stereo amps, could use 2 x mono, cheapest Maxim I2S = MAX98357A = $0.87
+		IC should work just fine, but is really hard to set the volume.. (can't digipot I2S). Might be handled in I2S.. Nope. I2S doesn't natively control the sound. But you can scale down the signal (implemented in lib!):
+			to cut volume in half, drop by 6db. so how should we scale signal/voltage?
+			V/V = 1, G = 0. V/V = 0.5, G = -6. V/V = 0.25, G = -12
+			G = 10*log(1/(V/V)^2)
+			ok, let's go in evenly spaced steps. 
+			0dB is max volume, signal*0 is min volume
+
+			I'm pretty sure that the signal = voltage
+			Definitely sure that volume = power
+			So, if you cut the signal in half (*0.5), you cut the volume to 25%
+				power = V^2/R
+
+				for power1, V = signal
+				for power2, V = signal*k
+				power2/power1 = %volume
+
+				%volume = k^2
+
+				setVolume(uint8_t vol){
+					k = sqrt(vol);
+					signal = signal*k
+				}
+				size of volume steps = S = 10*log(1/Nsteps) [dB]
+				Nsteps = 100, S = -20
+				Nsteps = 256, S = -24
+
+			Well, that was an interesting thought experiment, but the Teensy Audio library handles it for you.
+			Use playSdWav or AudioPlaySdMp3 to get two channel audio. Each channel goes into a mixer (which has up to 4 input channels, 1 output channel). Set the gain of each mixer with gain(channel, gain); e.g. mix1.gain(0, 0.4);
+
+	I2S in Audio lib has benefit of being 16 bit audio, so may be good even for mono (currently 12 bit)
+	I'm really starting to like the MAX98357A - 
+		much more efficient: @vdd = 3.7
+						MAX98357A	MAX98310
+			8ohm, 0.2W: 2x	 30mW	   350mW	Stereo 8ohm 0.5W <- Best in class.. Also most expensive
+			8ohm, 0.4W: 2x	 55mW	   350mW	Stereo 8ohm 0.5W
+			4ohm, 0.25W:2x 	 74mW	   580mW	Stereo 4ohm 0.5W
+			4ohm, 0.5W: 2x	100mW	   710mW	Stereo 4ohm 0.5W
+
+			8ohm, 0.4W:  	 50mW	   350mW	Series 4ohm 0.5W
+			8ohm, 0.8W:  	 70mW	   250mW	Series 4ohm 0.5W
+			4ohm, 0.5W: 	100mW	   350mW	Parallel 8ohm 0.5W
+			4ohm, 1.0W:    	200mW	   650mW	Parallel 8ohm 0.5W
+	TI has four I2S amps <5W (all mono): 
+		TAS2552 (4W, $1.39) and TAS2553 (2.8W, $1.29) have boost converters (big, expensive)
+		TAS2521 (2W, $1.23) has SPI/I2C/miniDSP chip/24 pins and is generally crazy complex. 
+		TAS2505 (2W, $1.20) is also unnecessarily complex, but doesn't have miniDSP
+
+		>5W, everything needs a high voltage supply. TAS5751M is nice (complex), but needs 8V+
+
+	In reality, all of these prices are way higher than what we want :( MAX98357A is ~$1.10/pc at q1000, MAX98310 is $0.385
+
+Reducing Power: Class D is way more efficient (part of why the mono I2S piece is attractive)
+						 MAX98304	MAX98310	MAX9759
+			$(octopart)		$0.49	  $0.385	 $0.869
+			8ohm, 0.4W:  	 65mW	   350mW	   43mW	Series 4ohm 0.5W
+			8ohm, 0.8W:  	 80mW	   250mW	   87mW	Series 4ohm 0.5W
+			4ohm, 0.5W:    	 95mW	   710mW	   95mW	Parallel 8ohm 0.5W
+			4ohm, 1.0W:    	176mW	   650mW	  149mW	Parallel 8ohm 0.5W
+
+
+Audio Calculations:
+	Vpp = voltage peak to peak at speaker
+	Vavg = Vpp/2
+	Vrms = Vavg/sqrt(2) = Vpp/(2*sqrt(2))
+
+	Prms = Vrms^2/Rspeaker = Vpp^2/(8*Rspeaker)
+	Vpp = sqrt(8*Rspeaker*Prms)
+
+	For BTL design, Vpp = 2*Vsupply
+	Prms = Vsupply^2/(2*Rspeaker)
+	Note: only true sometimes. It's smarter to use gain/voltage equations here.
+
+
+	e.g. 0.5W speaker, 8ohm Vpp = 5.66V, Vsupply = 2.82V
+
+	Gain [dB] = G = 10*log(Pout/Pin) = 10*log((Vout_rms/Vin_rms)^2) = 10*log((Vout_pp/Vin_pp)^2)
+	Vout/Vin = 10^(G/20)
+	G  Vout/Vin
+	0	1
+	3	1.41
+	6	2
+	9	2.82
+	12	4
+	15	4.47
+
+	using 6dB gain, 1.25Vin_pp: Vout_pp = 2.5V, BTL Vpp = 5V, 0.4W
+
+	I_in = (Prms/Vsupply)/eff
+
+	Pin = Pout/eff
+	Pheat = Pin - Pout = Pout(1/eff - 1)
+
+	With my current setup, two 8ohm 0.5W speakers in parallel = 4ohm 1W
+	Vpp = sqrt(8*4*1) = 5.65
+	Vp = 2.828
+	2.828/3.3 = 0.857 V/V = -1.34 dB
+	2.828/1.25 = 2.263 V/V = 7 dB
+
+	using 6dB, Vp = 2.5, Vpp = 5, Prms = 0.78W
