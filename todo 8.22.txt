@@ -1,13 +1,21 @@
 ToDo.
-	Friday, 9/9: 
-		add 33ohm resistors to USB
-		test serial output
-		test amp hardware
+x	add 33ohm resistors to USB
+	Finish audio testing
+	Test vreg/powering from battery
+x	test serial output - 0 ohm next to lipo charger
 
-	New module enclosure
+x	New module enclosure
 	New motor/speaker enclosures
 
+	Switch to internal voltage regulator? 120mA? Teensy 3.1 uses it!!!! FFFUUUU
+	Delete R10 - the lipo charger passes through Vin - 0.7V
+
+
 	Refactor main code
+	Trigger extra motors
+
+	Battery life function
+	Shutdown function
 
 	Audio
 x		Access flash memory
@@ -56,25 +64,6 @@ x			Linearize sound pressure in software as needed (now done in HW - 2nd red pcb
 			Tune volume up/down speed
 
 
-	Double tap on accelerometer to start the swing
-x		Update to latest dev library
-x			Move fixed Euler angle function
-x			Add other added functions (normalize?)
-x		Port MotionDriver 6.12 Library
-x		Implement fixed Euler angle function
-x		Implement tap detection
-		Tune tap thresholds and timing
-		Implement calibration code in new library
-
-	Trigger extra motors
-
-	Battery life function
-	Shutdown function
-
-x	Reduce motion calibration to under 15 seconds
-
-
-
 	Test iOS
 		See what the data from the app looks like
 		learn how to program the ble module
@@ -85,8 +74,21 @@ x	Reduce motion calibration to under 15 seconds
 		"Settings updated" Audio
 
 
+	Double tap on accelerometer to start the swing
+x		Update to latest dev library
+x			Move fixed Euler angle function
+x			Add other added functions (normalize?)
+x		Port MotionDriver 6.12 Library
+x		Implement fixed Euler angle function
+x		Implement tap detection
+x		Tune tap thresholds and timing
+		Implement calibration code in new library
 
-	
+
+	Turn off BLE to save power?
+	Turn off audio amp to save power
+	Fix schematic note about Vreg - if I actually use it. drop out is <0.11 V for 
+
 
 
 	UI!
@@ -110,3 +112,5 @@ x	Reduce motion calibration to under 15 seconds
 Down the line:
 	MPU calibration values get stored in eeprom, and then read from eeprom at boot and sent to IMU (or just make IMU save them?)
 	make all of the data types in the new imu library consistent
+	Save volume level to spi flash, read at boot
+	Switch to either MAX98304 (analog in, $0.49) or MAX98357A (I2S in, $1.00)
