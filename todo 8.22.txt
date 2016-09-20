@@ -1,15 +1,10 @@
 ToDo.
-x	add 33ohm resistors to USB
 	Finish audio testing
 	Test vreg/powering from battery
-x	test serial output - 0 ohm next to lipo charger
 
-x	New module enclosure
-	New motor/speaker enclosures
-
-	Switch to internal voltage regulator? 120mA? Teensy 3.1 uses it!!!! FFFUUUU
-	Delete R10 - the lipo charger passes through Vin - 0.7V
-
+	Test programming M4F over SWD
+x	Understand how to program BLE
+	Test programming BLE
 
 	Refactor main code
 	Trigger extra motors
@@ -17,31 +12,49 @@ x	New module enclosure
 	Battery life function
 	Shutdown function
 
+x	add 33ohm resistors to USB
+x	test serial output - 0 ohm next to lipo charger
+
+x	New module enclosure
+
+	Test iOS/BLE
+		See what the data from the app looks like
+		learn how to program the ble module
+		Pass data through BLE to Teensy
+		Teensy detects new profile and goes into uploading mode
+			Blinking blue LED
+		Sets parameters
+		"Settings updated" Audio
+
 	Audio
 x		Access flash memory
 x		How to program the flash memory in factory
 x		Run RawHardwareTest and debug until it passes (inside SerialFlash lib examples)
 
-		Volume Control
+x		Volume Control
 x			Detect/debounce buttons (Just use regular bounce library)
 x			Ability to control digipot (added tested working code 9.5)
 x			Linearize sound pressure in software as needed (now done in HW - 2nd red pcb rev)
-			Adjust volume through digipot
+x			Adjust volume through digipot
 
 		Amp Hardware
-			Wire two speakers in series (8ohm) and confirm impedance
-			Test DAC output (sine wave with dc offset)
-			Test DAC signal after DC blocking cap (0V center)
-			Test DAC signal while adjusting digitpot (shifting magnitude, 0V center)
-				Check if feedback should go from in+ to out-
-				Check if one audio channel is at 0V
+x			Wire two speakers in parallel (8ohm) and confirm impedance
+x			Test DAC output (sine wave with dc offset)
+x			Test DAC signal after DC blocking cap (0V center)
+x			Test DAC signal while adjusting digitpot (shifting magnitude, 0V center)
+x				Check if feedback should go from in+ to out-
+x				Check if one audio channel is at 0V
+x			Fix Hardware
+x				Add feedback resistors to other channel
+x				Add cap isolation to input
+x				Cut in- to ground
+			Test audio output
 			Plug in speakers and test audio
 				Store a test file in spi flash
 				Output into speakers
 				Change volume
-			Draw finalize schematics
+			Draw final schematics
 			Update dev notes about audio schematic
-
 
 		Sound files
 			"Welcome to Swing Forge. Preparing system."
@@ -64,15 +77,6 @@ x			Linearize sound pressure in software as needed (now done in HW - 2nd red pcb
 			Tune volume up/down speed
 
 
-	Test iOS
-		See what the data from the app looks like
-		learn how to program the ble module
-		Pass data through BLE to Teensy
-		Teensy detects new profile and goes into uploading mode
-			Blinking blue LED
-		Sets parameters
-		"Settings updated" Audio
-
 
 	Double tap on accelerometer to start the swing
 x		Update to latest dev library
@@ -84,11 +88,15 @@ x		Implement tap detection
 x		Tune tap thresholds and timing
 		Implement calibration code in new library
 
+	Reducing BOM Cost
+x		Check viability of using M0+ (MKL26Z64VFT4)
+x		Check viability of using NRF81 chip (M0)
+x		Check viability of using NRF82 chip (M4F) $3.95 at q1000
+x		Check BOM breakdown, see where we can reduce cost
 
-	Turn off BLE to save power?
-	Turn off audio amp to save power
-	Fix schematic note about Vreg - if I actually use it. drop out is <0.11 V for 
-
+	Reducing Power Consumption
+		Turn off BLE to save power?
+		Turn off audio amp to save power
 
 
 	UI!
@@ -114,3 +122,27 @@ Down the line:
 	make all of the data types in the new imu library consistent
 	Save volume level to spi flash, read at boot
 	Switch to either MAX98304 (analog in, $0.49) or MAX98357A (I2S in, $1.00)
+
+
+
+Schematic/PCB
+	Fix schematic note about Vreg - if I actually use it. drop out is <0.11 V for 500mA
+	mcp73831 HAS to be mcp73831-2
+	Redo those power input traces
+	Redo audio power traces
+	Pullups on volume buttons! internal pullups are crazy low resistance
+	resistor arrays?
+
+	"not populated" -> DNP
+	Specs on PCB on schematic
+	BLE crystal specs on schematic
+	Consistent file names (bottom right)
+	Consistent title locations
+
+	Footprint for digipot is way off
+	Don't need test pads for SPI
+	make a nicer jtag pin pattern
+
+	Make sure USB conn is rated for higher power if we use that
+	LIPO current protection
+	LIPO Fuel gauge?
