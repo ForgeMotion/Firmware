@@ -10,8 +10,8 @@
 
 #define DEBUG
 #ifdef DEBUG
-#define DEBUG_PRINT(x) Serial.print(F(x))
-#define DEBUG_PRINTLN(x) Serial.println(F(x))
+#define DEBUG_PRINT(x) Serial.print(x)
+#define DEBUG_PRINTLN(x) Serial.println(x)
 #else
 #define DEBUG_PRINT(x)
 #define DEBUG_PRINTLN(x)
@@ -32,95 +32,33 @@
 
 
 // User settings
+	int16_t angleLimits[] = {6,-6,-7,7,25,25};   // [PitchBack,PitchFwd,YawR,YawL,RollBack,RollFwd]
 	bool audioEnable[2] = {true,true}; // feedback enabled: {backswing, frontswing}
 	bool leftHanded = false;
 
 
 // Analyzing Swing
-
 	bool backSwingCompleted = 0, firstGo = 1, firstCalDone = 0;
 	const int16_t goButtonPin = 3, goInterruptNum = 1;
 	volatile unsigned long nowGo = 0, lastGo = 0;
 	volatile bool goState = 0;
 	unsigned long goStartTime = 0, firstCalTime = 0;
-	int16_t angleLimits[] = {6,-6,-7,7,25,25};   // [PitchBack,PitchFwd,YawR,YawL,RollBack,RollFwd]
-
+elapsedMillis 
 // Battery and power
-	const int16_t battVoltsPin = A0, killPin = A8, battLedPin = 6;
-	
-// SD datalogger
-	const int16_t CSPin = 53;
-	#include <SPI.h>
-	#include <SD.h> 
-	File uCard;
-	String inString = "";       // temp to hold profile settings 
-	int16_t inChar = 0;
-
-// Real Time Clock
-	// #include "RTClib.h"
-	// RTC_DS1307 rtc;
-
-// Audio shield
-	const int16_t clockPin = 8, dataPin = 9, busyPin = 10, resetPin = 11;
-	#include "Wtv020sd16p.h"
-	Wtv020sd16p AudioMan(resetPin,clockPin,dataPin,busyPin);
-
-// BLE Programming
-	const int16_t bleBounceTime = 400; 
-
-	#include "Boards.h"
-	#include "ble_mini.h"
-	const int16_t bleLedPin = 4, bleButtonPin = 2, bleInterruptNum = 0;
-	volatile unsigned long nowBLE = 0, lastBLE = 0; 
-	volatile bool bleState = 0;
+	const int16_t battVoltsPin = PROC_PIN_11, killPin = PROC_PIN_26;
 
 // IMU
-	const int16_t IMUInterruptNum = 4;
-	#include <Wire.h> // I2C library
-	#include "MPU6050_6Axis_MotionApps20.h" // I2Cdev + IMU libs
-	MPU6050 mpu;
-
-	// MPU control/status vars
-	bool dmpReady = false;   // set true if DMP init was successful
-	uint8_t mpuIntStatus;    // holds actual interrupt status byte from MPU
-	uint8_t devStatus;     // return status after each device operation (0 = success, !0 = error)
-	uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
-	uint16_t fifoCount;     // count of all bytes currently in FIFO
-	uint8_t fifoBuffer[64];   // FIFO storage buffer
-	volatile bool mpuInterrupt = false;   // indicates whether MPU interrupt pin has gone high
-	
-	// orientation/motion vars
-	Quaternion qCurrent, qInitPos, qDev;  // Current rotation from gravity, initial, deviation
-	float qNorm = 0;       // the norm of a quaternion, for checking if normalized
-	float yprDev[] = {0,0,0};   // Deviations of YPR from initial during a swing
-	bool qDevCalcd = 0;
 
 
 void setup() { 
 // Initialize communication busses
-	// I2C needs to be before Serial.begin, or bus crashes
-	#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-		Wire.begin();
-		TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
-	#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
-		Fastwire::setup(400, true);
-	#endif
 
 	Serial.begin(115200);
 
 // Set GPIOs
-	// Battery and power
-	pinMode(killPin, OUTPUT);
-	digitalWrite(killPin, LOW);
 	pinMode(battVoltsPin, INPUT);
-	pinMode(battLedPin, OUTPUT);
 	
-	// Motors
-	pinMode(motorFront, OUTPUT);
-	pinMode(motorRear, OUTPUT);
-	pinMode(motorLeft, OUTPUT);
-	pinMode(motorRight, OUTPUT);
-	triggerMotors();
+	for(int i=0; i<7; i++) motor[i].init();
 	 
 	// For GO button and LED
 	pinMode(goButtonPin, INPUT_PULLUP);

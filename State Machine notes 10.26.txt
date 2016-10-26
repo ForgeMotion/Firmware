@@ -1,0 +1,50 @@
+State Machine notes
+universalUpdate()
+	update power switch debouncer (not until new HW)
+		if button is being held
+			don't transition
+			if held > threshold -> shutdown
+	check if ble connected
+		if data received -> BLE state
+	update breathing led
+	read battery
+		if low -> shutdown
+	update volume debouncers
+		if pressed, change volume and beep
+
+Idle
+	if double tap -> backswing (make sure to accomodate sleep wakeup)
+		get init pose
+		audio/vibe
+		set imu to single tap
+	if timeout -> sleep
+Sleep (not an official state)
+	wakeups: timeout, double tap
+	returns to idle state
+Backswing
+	getDev
+	trigger motors
+	if backswing > threshold -> frontSwing
+		audio trigger
+		change direction
+	if timeout or canceled (single tap) -> idle
+		audio trigger
+		set imu to double tap
+FrontSwing
+	getDev
+	trigger motors
+	if frontswing > threshold -> idle
+		audio trigger
+	if timeout or canceled (single tap) -> idle
+		audio trigger
+		set imu to double tap
+BLE
+	process data into settings
+	check data, if it's good, set as current settings
+	clear buffer
+	done -> idle
+
+	
+
+
+

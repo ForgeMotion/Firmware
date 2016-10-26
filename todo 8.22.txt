@@ -1,21 +1,35 @@
-ToDo.
-	Finish audio testing
-	Test vreg/powering from battery
+SF tests to run
 
-	Test programming M4F over SWD
-x	Understand how to program BLE
+values of motor position enum
+values of #define 60000 (does it need to be -u suffix?)
+
+ToDo.
+x	Refactor main code
+	Trigger extra motors
+x	Battery life function
+x	Shutdown function
+	Volume functions
+
+	Sound files
+
 	Test programming BLE
 
-	Refactor main code
-	Trigger extra motors
-
-	Battery life function
-	Shutdown function
+	IMU calibration sequence
 
 x	add 33ohm resistors to USB
 x	test serial output - 0 ohm next to lipo charger
 
 x	New module enclosure
+
+x	Test programming M4F over SWD
+x	Understand how to program BLE
+
+x	Replace non-working switches
+x	Remove unneeded programming headers
+x	Solder battery in
+x	Solder to internal regulator
+
+x	Test vreg/powering from battery
 
 	Test iOS/BLE
 		See what the data from the app looks like
@@ -118,7 +132,8 @@ x		Check BOM breakdown, see where we can reduce cost
 
 
 Down the line:
-	MPU calibration values get stored in eeprom, and then read from eeprom at boot and sent to IMU (or just make IMU save them?)
+	Check if the whole thing will run on LC
+	MPU calibration values get stored in eeprom, and then read from eeprom at boot and sent to IMU (or just make IMU save them?) for factory cal.
 	make all of the data types in the new imu library consistent
 	Save volume level to spi flash, read at boot
 	Switch to either MAX98304 (analog in, $0.49) or MAX98357A (I2S in, $1.00)
@@ -126,6 +141,8 @@ Down the line:
 
 
 Schematic/PCB
+	Use one of the deepSleep compatible pins for IMU interrupt
+
 	Fix schematic note about Vreg - if I actually use it. drop out is <0.11 V for 500mA
 	mcp73831 HAS to be mcp73831-2
 	Redo those power input traces
@@ -133,7 +150,7 @@ Schematic/PCB
 	Pullups on volume buttons! internal pullups are crazy low resistance
 	resistor arrays?
 
-	"not populated" -> DNP
+	"not populated" -> "DNP"
 	Specs on PCB on schematic
 	BLE crystal specs on schematic
 	Consistent file names (bottom right)
@@ -146,3 +163,7 @@ Schematic/PCB
 	Make sure USB conn is rated for higher power if we use that
 	LIPO current protection
 	LIPO Fuel gauge?
+
+
+	Definitely have to go through the parts list better. NCP177A regulator has active discharge, could be burning lots of current during testing
+	Check quiescent current of p-fet, look for a better one

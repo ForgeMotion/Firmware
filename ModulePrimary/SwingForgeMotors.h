@@ -1,3 +1,8 @@
+/* This provides motor control API
+It also includes defines to map the processor pins back to Arduino pins
+
+
+*/
 
 #ifndef SwingForgeMotors_h
 #define SwingForgeMotors_h
