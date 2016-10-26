@@ -8,10 +8,23 @@
 #define DEBUG_PRINTLN(x)
 #endif
 
+#include "SwingForgeStateMachine.h"
+#include "SwingForgeMotors.h"
+
 // Declare variables 
+// GPIO
+	const uint8_t battSensePin = PROC_PIN_11, killPin = PROC_PIN_26; // ==================================================
+	const float battDivider = 4.3; // (33k+10k)/10k
+
+	#include "RGBMood.h"
+	RGBMood rgb(false, PROC_PIN_61, PROC_PIN_62, PROC_PIN_63); // common cathode, rgb pins
+
+	#include "Bounce2.h"
+	const uint8_t volPins[] = {PROC_PIN_12, PROC_PIN_1}; // up, down
+	Bounce volSw[2]; // vol up, vol down
+
 // Motor control
-	#include "SwingForgeMotors.h"
-	sfMotor motor[7] = {
+	SFMotor motor[NUM_MOTORS] = {
 		{PROC_PIN_28, MOTOR_POS_FRONT},
 		{PROC_PIN_41, MOTOR_POS_BACK_TOP},
 		{PROC_PIN_42, MOTOR_POS_BACK_BOTTOM},
@@ -19,37 +32,45 @@
 		{PROC_PIN_46, MOTOR_POS_SHOULDER_R},
 		{PROC_PIN_44, MOTOR_POS_SIDE_L},
 		{PROC_PIN_45, MOTOR_POS_SIDE_R}
-	}
-
+	};
+//	RGBMood 
 
 // User settings
-	float angleLimits[] = {6.0,-6.0,-7.0,7.0,25.0,25.0};   // [PitchBack,PitchFwd,YawR,YawL,RollBack,RollFwd]
-	bool audioEnable[2] = {true,true}; // feedback enabled: {backswing, frontswing}
-	bool leftHanded = false;
-	uint32_t backSwingTimeout = 60000, frontSwingTimeout = 60000;
+	float angleLimits[] = {6.0,-6.0,-7.0,7.0,25.0,25.0};	// [PitchFwd,PitchBack,YawL,YawR,RollBack,RollFwd]
+	uint8_t feedbackEnable = 0b00111111;					// bitmask for feedback enable, indices match limits above
 
+	uint32_t backswingTimeout = 60000, frontswingTimeout = 60000;
+	elapsedMillis swingTimeout = 0;
+	bool swingSuccess = false;
 
 // IMU
-	const uint8_t imuIntPin = PROC_PIN_64;
+	#include <Wire.h>
+  #include <EEPROM.h>
+//	#include "I2Cdev.h"
+	#include "inv_mpu.h"
+	#include "inv_mpu_dmp_motion_driver.h"
+	#include "quaternionMath.h"
 
-// GPIO
-	const uint8_t battSensePin = PROC_PIN_11, killPin = PROC_PIN_26; // ==================================================
-	const float battDivider = 4.3; // (33k+10k)/10k
-
-	#include "RGBMood.h"
-	RGBMood rgb(false, PROC_PIN_61, PROC_PIN_62, PROC_PIN_63);
-
-
-	#include "Bounce2.h"
-	const uint8_t volPins[] = {PROC_PIN_12, PROC_PIN_1}; // up, down
-	Bounce volSw[2]; // vol up, vol down
+	const uint8_t imuIntPin = PROC_PIN_64, IMU_HZ = 50;
+	volatile bool imuDataReady = false, tapDetected = false;
+	Quaternion currentQuat, initQuat;
+	float YPRdev[] = {0.0, 0.0, 0.0};
+	uint8_t gyroBiasStart = 10, accelBiasStart = 14; // starting addresses of 4 byte bias values in eeprom
 
 // Power saving mode
-	#include "Snooze.h"
+	#include <Snooze.h>
 	SnoozeBlock config;
 
-// Audio
+// BLE
+
+
+// Audio and serial flash
 	const uint8_t audioShutdownPin = PROC_PIN_35;
+
+	
+// Time between samples for BLE, battery, volume respectively
+	uint16_t updateInterval[3] = {2000, 5000, 100};
+	elapsedMillis elapsed[3];
 
 
 void setup(){
@@ -57,41 +78,53 @@ void setup(){
 	Serial.begin(115200);
 
 // Check battery
-	analogReference(INTERNAL);
+	analogReference(INTERNAL); // 1.2V ref
 	analogReadRes(16);
 	analogReadAveraging(8);
 
 	pinMode(battSensePin, INPUT);
 	if(getBatteryLife(battSensePin, battDivider) <= 5){
 		DEBUG_PRINTLN("Battery is critically low; shutting down");
+		delay(1000);
 		completeShutdown();
 	}
 
 // Initialize IMU
+	Wire.begin();
 
+	initIMU(0x68, imuIntPin);
+	dmp_set_tap_count(2);
+
+	// int32_t bias = 0;
+	// for(int i=0; i<4; i++) bias = (bias << 8) | EEPROM.read(gyroBiasStart+i);
+	// dmp_set_gyro_bias(bias);
+
+	// bias = 0;
+	// for(int i=0; i<4; i++) bias = (bias << 8) | EEPROM.read(accelBiasStart+i);
+	// dmp_set_accel_bias(bias);
 
 // Initialize serial flash
 
 
 // Initialize audio
 	pinMode(audioShutdownPin, OUTPUT);
-	digitalWrite(audioShutdownPin, LOW);
+	digitalWriteFast(audioShutdownPin, LOW);
 
 	DEBUG_PRINTLN("Hello. Welcome to Swing Forge.");
 	// Welcome audio file
 
 // Prepare motors
-	for(int i=0; i<7; i++) motor[i].init();
+	for(int i=0; i<NUM_MOTORS; i++) motor[i].init();
 
 // Start motor intro
 
 
 // Set up indicator led
-	rgb.setMode(RGBMood::RAINBOW_HUE_MODE);  // Automatic random fade.
-	rgb.setFadingSteps(200);   	// Fade with 200 steps.
-	rgb.setFadingSpeed(25);    	// Each step last 25ms. A complete fade takes 25*200 = 5 seconds
-	rgb.setHoldingTime(0);		// No need to stay red.
-	rgb.fadeHSB(0, 255, 255); 	// Rainbow mode only change Hue so we first set the saturation and brightness.
+	rgb.setMode(RGBMood::RAINBOW_HUE_MODE);
+	rgb.setFadingSteps(100);	// Fade with 100 steps between colors
+	rgb.setFadingSpeed(20);		// Each step last 20ms. A complete fade takes 20*100 = 2 seconds
+	rgb.setHoldingTime(0);
+	rgb.fadeHSB(0, 255, 255); 	// Rainbow mode only change Hue so set saturation and brightness.
 
 	rgb.tick();
 	
@@ -104,22 +137,19 @@ void setup(){
 		volSw[i].interval(5);
 	}
 
-
 // Configure sleep mode
-    config.pinMode(imuIntPin, INPUT, RISING);
-    config.setTimer(500);
+	config.pinMode(imuIntPin, INPUT, RISING);
+	config.setTimer(500);
 
 // Initialize BLE
 
 
-// Finish IMU calibration
+// Ready! Reset IMU vars and timers, and give Audio/Visual cue
+	tapDetected = false;
+	for(int i=0; i<3; i++) elapsed[i] = 0;
 
-
-// Audio/Visual cue for "ready"
-
-
-// Begin state machine
-	currentState = ST_IDLE;
+	// Audio cue =================================================================================
+	rgb.setRGB(Color::WHITE);
 }
 
 
@@ -130,110 +160,207 @@ void loop(){
 		for(int i=0; i<2; i++) volSw[i].update();
 
 
-		// Check for BLE Data
-
+		// Check for BLE connection and data
+		if(elapsed[0] > updateInterval[0]){
+			elapsed[0] = 0;
+			
+			//  =================================================================================
+		}
 
 		// Check battery
-		x = getBatteryLife(battSensePin, battDivider);
-		// if low, set led mode to red blink
-		// if dying, audio cue + shutdown
+		if(elapsed[1] > updateInterval[1]){
+			elapsed[1] = 0;
 
+			uint8_t battPercent = getBatteryLife(battSensePin, battDivider);
+			if(battPercent < 20) rgb.setMode(RGBMood::FIRE_MODE);
+			else if(battPercent < 5){
+				// Audio cue =================================================================================
+				completeShutdown();
+			}
+		}
 
-		// Check volume - needs a timer so this doesn't occur too often
-		if(volSw[0].fell()) changeVolume(1);
-		else if(volSw[1].fell()) changeVolume(0);
+		// Check volume
+		if(elapsed[2] > updateInterval[2]){
+			elapsed[2] = 0;
+
+			if(volSw[0].fell()) changeVolume(1);
+			else if(volSw[1].fell()) changeVolume(0);
+		}
 	}
 
 
 	currentState = runState(currentState);
 
+	if(imuDataReady) processIMU();
+
 	rgb.tick();
 }
 
+// ==================================== State machine functions ====================================
+state_t runIdleState(){
+	// if a double tap happened in loop(), start swing!
+	if(tapDetected){
+		tapDetected = false;
+		return ST_BACKSWING;
+	}
 
-
-
-// ==================================== State machine definitions ====================================
-// Enumerate the states of the state machine
-enum state_t{
-	ST_IDLE,
-	ST_BACKSWING,
-	ST_FRONTSWING,
-	ST_BLE_PROGRAMMING,
-	NUM_STATES
-};
-
-// Set up state functions - each must return the new currentState
-typedef state_t state_func_t(); 
-
-
-state_t doStIdle(){
 	int who = Snooze.sleep(config); // 36 for timer, pin number for pin wakeup
+
+	rgb.tick(); // (make sure we have a blinky light on wakeup)
+
+	if(who == imuIntPin){ // or if a double tap woke us from our sleep!
+		tapDetected = false;
+		return ST_BACKSWING;
+	}
+
+	return ST_IDLE;
+}
+
+void goIdleToBackswing(){
+	tone(motor[MOTOR_POS_FRONT].pin(), 488.28, 300);
+	delay(600);
+	tone(motor[MOTOR_POS_FRONT].pin(), 488.28, 400);
+
+	if(rgb.mode_ != RGBMood::FIRE_MODE){
+		rgb.setMode(RGBMood::GREEN_MODE);
+		rgb.setFadingSteps(10);
+		rgb.setFadingSpeed(40);
+	}
+	rgb.tick();
+	// Audio cue =================================================================================
+
+	dmp_enable_feature(DMP_FEATURE_TAP | DMP_FEATURE_6X_LP_QUAT);
+	// dmp_set_tap_count(1);
+
+	swingTimeout = 0;
+	while(swingTimeout < 100 && !imuDataReady) rgb.tick();
+
+	if(imuDataReady) processIMU();
+	else DEBUG_PRINTLN("ERROR: Quats enabled, but no FIFO interrupt received!");
+
+	initQuat = currentQuat;
+	swingTimeout = 0;
+	swingSuccess = false;
+}
+
+state_t runBackswingState(){
+	getYPRDev(&initQuat,&currentQuat,YPRdev);
+	updateMotors(200);
+	printStatus();
+
+	// Auto detects handedness! If user rolled more than the limit, that's their backswing. 
+	if (abs(YPRdev[2]) > abs(angleLimits[4])){
+		angleLimits[5] = abs(angleLimits[5])*(YPRdev[2]<0?1:-1); // Adjust the frontswing limit to match handedness
+		return ST_FRONTSWING;
+	}
+
+	if(swingTimeout > backswingTimeout) return ST_IDLE;
+
+	if(tapDetected){
+		tapDetected = false;
+		return ST_IDLE;
+	}
+
+	return ST_BACKSWING;
+}
+
+void goBackswingToFrontswing(){
+	if(feedbackEnable & (1<<4)) // Audio cue =================================================================================
+
+	if(rgb.mode_ != RGBMood::FIRE_MODE) {
+		// speed up the light effects!
+		rgb.setFadingSteps(5);
+		rgb.setFadingSpeed(30);
+	}
+
+	swingTimeout = 0;
+}
+
+state_t runFrontswingState(){
+	getYPRDev(&initQuat,&currentQuat,YPRdev);
+	updateMotors(200);
+	printStatus();
+
+	if((angleLimits[5] > 0 && YPRdev[2] > angleLimits[5]) || (angleLimits[5] < 0 && YPRdev[2] < angleLimits[5])) {
+		swingSuccess = true;
+		return ST_IDLE;
+	}
+
+	if(swingTimeout > frontswingTimeout) return ST_IDLE;
+
+	if(tapDetected){
+		tapDetected = false;
+		return ST_IDLE;
+	}
+
+	return ST_FRONTSWING;
+}
+
+void goSwingToIdle(){
+	turnOffMotors();
+
+	// if(swingSuccess && feedbackEnable & (1<<5)) // Audio cue =================================================================================
+	// else // Audio cue =================================================================================
+
+	if(rgb.mode_ != RGBMood::FIRE_MODE){
+		rgb.setMode(RGBMood::RAINBOW_HUE_MODE);
+		rgb.setFadingSteps(100);
+		rgb.setFadingSpeed(20);
+		rgb.fadeHSB(0, 255, 255);
+	}
+
+	dmp_enable_feature(DMP_FEATURE_TAP | DMP_FEATURE_GYRO_CAL);
+	dmp_set_tap_count(2);
+}
+
+state_t runBLEState(){
+	// Audio cue ================================================================================= "New settings uploading"
+
+	// Process serial data into new settings
 	rgb.tick();
 
-	if(who == imuIntPin) return ST_BACKSWING; // woken up by double tap on IMU!
+	// Audio cue ================================================================================= "Upload complete" || "upload failed, please try again"
+
+	// serial.flush()
+	return ST_IDLE;
+}
+
+void goToBLE(){
+	dmp_enable_feature(DMP_FEATURE_GYRO_CAL);
+	dmp_set_tap_count(2);
+
+	turnOffMotors();
+
+	if(rgb.mode_ != RGBMood::FIRE_MODE){
+		rgb.setMode(RGBMood::BLUE_MODE);
+		rgb.setFadingSteps(10);
+		rgb.setFadingSpeed(20);
+	}
+	rgb.tick();
+}
+
+void goBLEToIdle(){
+	dmp_enable_feature(DMP_FEATURE_TAP | DMP_FEATURE_GYRO_CAL);
+	dmp_set_tap_count(2);
+
+	if(rgb.mode_ != RGBMood::FIRE_MODE){
+		rgb.setMode(RGBMood::RAINBOW_HUE_MODE);
+		rgb.setFadingSteps(100);
+		rgb.setFadingSpeed(20);
+		rgb.fadeHSB(0, 255, 255);
+	}
+	rgb.tick();
 }
 
 
-state_t doStBswing(){
-
-}
-
-
-state_t doStFswing(){
-
-}
-
-
-state_t doStBLE(){
-
-}
-
-
-// Store state functions in lookup table
-state_func_t* const stateTable[NUM_STATES] = {doStIdle, doStBswing, doStFswing, doStBLE};
-
-// Function to run current state's function and transition if needed
-state_t runState(state_t curState) {
-    state_t newState = stateTable[curState]();
-
-    transition_func_t *transition = transitionTable[newState][curState];
-	if (transition) transition();
-
-    return newState;
-};
-
-// Set up transition functions
-typedef void transition_func_t();
-
-// Store transition functions in lookup table (can be NULL even for valid transitions, can be duplicates)
-transition_func_t * const transitionTable[NUM_STATES][NUM_STATES] = {
-// Current State:	
-// 	Idle 				Backswing 				Frontswing 			BLE				// New State (down)
-	{NULL,				goBackswingToIdle,		goFrontswingToIdle,	NULL}, 	// Idle
-	{goIdleToBackswing,	NULL,					NULL,				NULL},			// Backswing
-	{NULL,				goBackswingToFrontswing,NULL,				NULL},			// Frontswing
-	{NULL, 				NULL,					NULL,				NULL},			// BLE
-};
-
-
-// void goIdleToBLE(); 
-void goIdleToBackswing();
-void goBackswingToIdle();
-// void goBackswingToBLE();
-void goBackswingToFrontswing();
-void goFrontswingToIdle();
-// void goFrontswingToBLE();
-
-
-
+// ==================================== General helper functions ====================================
 
 uint8_t getBatteryLife(uint8_t pin, float divider) {
 	uint16_t tempBatt = analogRead(pin);
 	tempBatt = tempBatt * 1200 / 65535 * divider; // 1200mV/(2^16-1 counts)*divider constant
 
 	DEBUG_PRINT("battery millivolts: ");
-	DEBUG_PRINTLN(tempBatt);
+	DEBUG_PRINT(tempBatt);
 
 	// convert millivolts to battery percentage (0-100)
 	if (tempBatt <= 3700)
@@ -243,7 +370,7 @@ uint8_t getBatteryLife(uint8_t pin, float divider) {
 
 	tempBatt = constrain(tempBatt, 0, 100);
 
-	DEBUG_PRINT("battery percent: ");
+	DEBUG_PRINT("; battery percent: ");
 	DEBUG_PRINTLN(tempBatt);
 
 	return uint8_t(tempBatt);
@@ -254,15 +381,114 @@ void completeShutdown(){
 	for(int i=0; i<7; i++) motor[i].disable();
 
 	// shut down BLE, IMU, audio
-	SPI.end();
+	// SPI.end();
 	Wire.end();
-	digitalWrite(audioShutdownPin, LOW);
+	digitalWriteFast(audioShutdownPin, LOW);
 
 	pinMode(killPin, OUTPUT);
-	digitalWrite(killPin, LOW);
+	digitalWriteFast(killPin, LOW);
+}
+
+void changeVolume(bool up){ // ====================================
+
+	// Audio cue =================================================================================
+
+}
+
+void updateMotors(uint8_t motorSpeed){
+	if(feedbackEnable & (1<<0)) motor[MOTOR_POS_FRONT].setSpeed(		(YPRdev[1] > angleLimits[0]) * motorSpeed);
+	if(feedbackEnable & (1<<1)) motor[MOTOR_POS_BACK_TOP].setSpeed(		(YPRdev[1] < angleLimits[1]) * motorSpeed);
+	if(feedbackEnable & (1<<1)) motor[MOTOR_POS_BACK_BOTTOM].setSpeed(	(YPRdev[1] < angleLimits[1]) * motorSpeed);
+	if(feedbackEnable & (1<<2)) motor[MOTOR_POS_SHOULDER_L].setSpeed(	(YPRdev[0] > angleLimits[2]) * motorSpeed);
+	if(feedbackEnable & (1<<3)) motor[MOTOR_POS_SHOULDER_R].setSpeed(	(YPRdev[0] > angleLimits[3]) * motorSpeed);
+	if(feedbackEnable & (1<<2)) motor[MOTOR_POS_SIDE_L].setSpeed(		(YPRdev[0] > angleLimits[2]) * motorSpeed);
+	if(feedbackEnable & (1<<3))	motor[MOTOR_POS_SIDE_R].setSpeed(		(YPRdev[0] > angleLimits[3]) * motorSpeed);
+}
+
+void turnOffMotors(){
+	for(int i=0; i<NUM_MOTORS; i++) motor[i].digitalWrite(0);
+}
+
+void printStatus(){
+	DEBUG_PRINT("Dev/lims: P: ");
+	DEBUG_PRINT(YPRdev[1]); // pitch
+	DEBUG_PRINT(" /+");
+	DEBUG_PRINT(angleLimits[0]); // bwd lim
+	DEBUG_PRINT("/");
+	DEBUG_PRINT(angleLimits[1]); // fwd lim
+	DEBUG_PRINT("  Y: ");
+	DEBUG_PRINT(YPRdev[0]); // yaw
+	DEBUG_PRINT(" /+");
+	DEBUG_PRINT(angleLimits[2]); // right lim
+	DEBUG_PRINT("/");
+	DEBUG_PRINT(angleLimits[3]); // left lim
+	DEBUG_PRINT("  R: ");
+	DEBUG_PRINT(YPRdev[2]); // roll
+	DEBUG_PRINT(" /+");
+	DEBUG_PRINT(angleLimits[4]); // back lim
+	DEBUG_PRINT("/");
+	DEBUG_PRINT(-angleLimits[5]); // right lim
+	DEBUG_PRINT("  ");
 }
 
 
-void changeVolume(bool up){
+// ==================================== IMU Helper functions ====================================
+void initIMU(uint16_t addr, uint8_t interruptPin){
+	struct int_param_s int_param;
+	int_param.cb = imuInterrupt;
+	int_param.pin = interruptPin;
 
+//	st.hw->addr = addr;
+	mpu_init(&int_param);
+	mpu_set_sensors(INV_XYZ_GYRO | INV_XYZ_ACCEL);
+	// mpu_configure_fifo(INV_XYZ_GYRO | INV_XYZ_ACCEL);
+	mpu_set_sample_rate(IMU_HZ);
+	dmp_load_motion_driver_firmware();
+	dmp_set_orientation(0x88); // {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}} orientation matrix
+	dmp_enable_feature(DMP_FEATURE_TAP | DMP_FEATURE_GYRO_CAL);
+	dmp_set_fifo_rate(IMU_HZ);
+	mpu_set_dmp_state(1);
+
+	dmp_register_tap_cb(tap_cb);
+	dmp_set_tap_thresh(TAP_Z, 250);
+	dmp_set_tap_axes(TAP_Z);
+    // dmp_set_tap_time(100);
+    // dmp_set_tap_time_multi(500);
+}
+
+uint8_t tapData[] = {0,0};
+void tap_cb(unsigned char dir, unsigned char count){
+	tapDetected = true;
+	tapData[0] = dir; tapData[1] = count;
+
+	DEBUG_PRINT("Tap detected! Direction: ");
+	DEBUG_PRINT(dir);
+	DEBUG_PRINT(" count: ");
+	DEBUG_PRINTLN(count);
+}
+
+static void imuInterrupt(){
+	imuDataReady = true;
+}
+
+void longArrayToQuat(long *input, Quaternion *quat){
+	quat->w = float(input[0])/0x40000000;
+	quat->x = float(input[1])/0x40000000;
+	quat->y = float(input[2])/0x40000000;
+	quat->z = float(input[3])/0x40000000;
+}
+
+void processIMU(){
+	short gyro[3], accel[3], sensors;
+	unsigned char more;
+	int ret;
+	unsigned long timestamp;
+
+	long quat[4];
+
+	if (0 == (ret = dmp_read_fifo(gyro, accel, quat, &timestamp, &sensors, &more))){
+		if (!more) imuDataReady = false;
+
+		longArrayToQuat(quat, &currentQuat);
+	}
 }

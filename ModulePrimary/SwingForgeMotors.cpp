@@ -1,39 +1,54 @@
 
 #include "SwingForgeMotors.h"
 
-sfMotor::sfMotor(int16_t pin, int16_t pos){
+SFMotor::SFMotor(int16_t pin, motor_position_e pos){
 	_pin = pin;
 	position = pos;
 }
 
-void sfMotor::init(){
+SFMotor::SFMotor(int16_t pin, motor_position_e pos, bool inverted){
+	_inverted = inverted;
+	SFMotor(pin, pos);
+}
+
+void SFMotor::init(){
 	pinMode(_pin, OUTPUT);
-	digitalWrite(_pin, 0);
+	digitalWriteFast(_pin, _inverted?1:0);
+
+	_enabled = true;
 }
 
-void sfMotor::disable(){
-	_enable = false;
-	digitalWrite(_pin, 0);
+void SFMotor::disable(){
+	digitalWriteFast(_pin, _inverted?1:0);
+	pinDisable(_pin);
+
+	_enabled = false;
 }
 
-int16_t sfMotor::enable(int16_t speed){
-	_enable = true;
-	return setSpeed(speed);
-}
 
-int16_t sfMotor::setSpeed(int16_t speed){
-	if(speed > 255 || speed < 0) return -1
+bool SFMotor::setSpeed(int16_t speed){
+	if(speed > 255 || speed < 0 || !_enabled) return false;
 	
+	analogWrite(_pin, _inverted?255-_speed:_speed);
 	_speed = speed;
-	analogWrite(_pin, _enabled ? _speed : 0);
 
-	return 0;
+	return true;
 }
 
-int16_t sfMotor::getSpeed(){
-	return _speed;
+
+bool SFMotor::digitalWrite(bool on){
+	if(!_enabled) return false;
+
+	digitalWriteFast(_pin, _inverted?!on:on);
+	_speed = on?255:0;
+
+	return true;
 }
 
-int16_t sfMotor::getPin(){
-	return _pin;
+
+void pinDisable(const uint8_t pin) {
+	volatile uint32_t *config;  
+	if (pin >= CORE_NUM_TOTAL_PINS) return;
+	config = portConfigRegister(pin);
+	*config = 0;
 }

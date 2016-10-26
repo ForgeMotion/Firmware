@@ -183,7 +183,7 @@ void RGBMood::tick() {
     }
   }
   if (pins_[0] > 0) {
-    if(common_cathode){
+    if(common_cathode_){
       analogWrite(pins_[0], current_RGB_color_[0]);
       analogWrite(pins_[1], current_RGB_color_[1]);
       analogWrite(pins_[2], current_RGB_color_[2]);

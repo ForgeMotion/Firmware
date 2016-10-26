@@ -13,11 +13,12 @@ universalUpdate()
 		if pressed, change volume and beep
 
 Idle
+	Sleep!
 	if double tap -> backswing (make sure to accomodate sleep wakeup)
+		enable quats
 		get init pose
 		audio/vibe
 		set imu to single tap
-	if timeout -> sleep
 Sleep (not an official state)
 	wakeups: timeout, double tap
 	returns to idle state

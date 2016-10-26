@@ -7,6 +7,8 @@ It also includes defines to map the processor pins back to Arduino pins
 #ifndef SwingForgeMotors_h
 #define SwingForgeMotors_h
 
+#include <Arduino.h>
+
 #define PROC_PIN_1  31
 #define PROC_PIN_2  26
 #define PROC_PIN_9  A10
@@ -48,29 +50,37 @@ It also includes defines to map the processor pins back to Arduino pins
 #define PROC_PIN_64 5
 
 
+void pinDisable(const uint8_t pin);
+
 enum motor_position_e {
-    MOTOR_POS_FRONT=0,
-    MOTOR_POS_BACK_TOP,
-    MOTOR_POS_BACK_BOTTOM,
-    MOTOR_POS_SHOULDER_L,
-    MOTOR_POS_SHOULDER_R,
-    MOTOR_POS_SIDE_L,
-    MOTOR_POS_SIDE_R
+	MOTOR_POS_FRONT=0,
+	MOTOR_POS_BACK_TOP,
+	MOTOR_POS_BACK_BOTTOM,
+	MOTOR_POS_SHOULDER_L,
+	MOTOR_POS_SHOULDER_R,
+	MOTOR_POS_SIDE_L,
+	MOTOR_POS_SIDE_R,
+    NUM_MOTORS
 };
 
 
-class sfMotor {
+class SFMotor {
 	public:
-		sfMotor(int16_t pin, int16_t pos);
+		SFMotor(int16_t pin, motor_position_e pos);
+		SFMotor(int16_t pin, motor_position_e pos, bool inverted);
 		void init();
 		void disable();
-		void enable(int16_t speed);
-		void setSpeed(int16_t speed);
-		int16_t getSpeed();
-		int16_t getPin();
+		bool setSpeed(int16_t speed);
+		bool digitalWrite(bool on);
+
+		bool enabled() 	{return _enabled;}
+		int16_t speed() {return _speed;}
+		int16_t pin() 	{return _pin;}
+
 	    motor_position_e position;
 	private:
-	    bool _enabled = true;
+	    bool _enabled = false;
+	    bool _inverted = false;
 	    int16_t _pin;
 	    int16_t _speed = 0;
 };

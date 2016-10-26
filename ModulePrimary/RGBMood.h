@@ -41,9 +41,9 @@ class RGBMood {
     uint16_t red() {return current_RGB_color_[0];}                // The current red color.
     uint16_t green() {return current_RGB_color_[1];}              // The current green color.
     uint16_t blue() {return current_RGB_color_[2];}               // The current blue color.
+    Modes mode_;
   private:
     bool common_cathode_ = true; // LEDs have common low side
-    Modes mode_;
     uint8_t pins_[3];           // The pins for color output. (PWM)
     uint16_t current_RGB_color_[3];
     uint16_t current_HSB_color_[3];
@@ -69,6 +69,11 @@ class Color {
     static const uint32_t AIRFORCEBLUE = 0x5D8AA8;
     static const uint32_t AMARANTH = 0xE52B50;
     static const uint32_t ASPARAGUS = 0x87A96B;
+    static const uint32_t WHITE = 0xFFFFFF;
+    static const uint32_t YELLOW = 0xFFFF00;
+    static const uint32_t CYAN = 0x00FFFF;
+    static const uint32_t PURPLE = 0xFF00FF;
+    static const uint32_t OFF = 0x000000;
 };
 
 #endif
