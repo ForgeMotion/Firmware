@@ -5,7 +5,7 @@ values of #define 60000 (does it need to be -u suffix?)
 
 ToDo.
 x	Refactor main code
-	Trigger extra motors
+x	Trigger extra motors
 x	Battery life function
 x	Shutdown function
 	Volume functions
@@ -13,8 +13,10 @@ x	Shutdown function
 	Sound files
 
 	Test programming BLE
+	Confirm that we can program mk20 with SWDIO, SWCLK, RST (not TRST)
+	Test analog readings
 
-	IMU calibration sequence
+x	IMU calibration sequence
 
 x	add 33ohm resistors to USB
 x	test serial output - 0 ohm next to lipo charger
@@ -101,6 +103,10 @@ x		Implement fixed Euler angle function
 x		Implement tap detection
 x		Tune tap thresholds and timing
 		Implement calibration code in new library
+			int mpu_run_self_test(long *gyro, long *accel) returns bias values, store them in eeprom (embed a program to redo cal?)
+x				write test code
+				write calibration code
+				calibrate
 
 	Reducing BOM Cost
 x		Check viability of using M0+ (MKL26Z64VFT4)
@@ -116,18 +122,19 @@ x		Check BOM breakdown, see where we can reduce cost
 	UI!
 
 	Fabric button for the power switch
+		Copper pads on each side of a thin piece of foam with a hole cut through it, wires run to pads
 	The button responds by vibrating gently, like a cat’s purr when he is awakened.
 	The vibration comes in two short spurts, indicating the vest is ready and awake.
 	Intro message
 	As soon as the intro message is complete, all the vibration motors in the vest vibrate in a “vibration symphony” to create the sensation that the body has been scanned.
 	Once calibration is complete, the vest stops vibrating and tells the user: “Your vest calibration is complete”.
 
-	Double tap to start swing, vibration/chime to signal starting swing, position feedback starts right away. Chime at full backswing
-	Single tap to exit swing
-	Solid green LED while running
-	Blinking blue LED while data upload
-	Orange breathing LED while idle
-	Red flash in between breaths for low battery
+x	Double tap to start swing, vibration/chime to signal starting swing, position feedback starts right away. Chime at full backswing
+x	Single tap to exit swing
+x	Solid green LED while running
+x	Blinking blue LED while data upload
+x	Orange breathing LED while idle
+x	Red flash in between breaths for low battery
 
 
 
@@ -136,34 +143,54 @@ Down the line:
 	MPU calibration values get stored in eeprom, and then read from eeprom at boot and sent to IMU (or just make IMU save them?) for factory cal.
 	make all of the data types in the new imu library consistent
 	Save volume level to spi flash, read at boot
-	Switch to either MAX98304 (analog in, $0.49) or MAX98357A (I2S in, $1.00)
+x	Switch to either MAX98304 (analog in, $0.49) or MAX98357A (I2S in, $1.00)
+
+	Work through the todo in TeensyWithMD6.12.ino (make MPU stop reporting accel/gyro data)
 
 
-
-Schematic/PCB
-	Use one of the deepSleep compatible pins for IMU interrupt
-
-	Fix schematic note about Vreg - if I actually use it. drop out is <0.11 V for 500mA
-	mcp73831 HAS to be mcp73831-2
-	Redo those power input traces
-	Redo audio power traces
-	Pullups on volume buttons! internal pullups are crazy low resistance
-	resistor arrays?
-
-	"not populated" -> "DNP"
-	Specs on PCB on schematic
-	BLE crystal specs on schematic
-	Consistent file names (bottom right)
-	Consistent title locations
-
-	Footprint for digipot is way off
-	Don't need test pads for SPI
-	make a nicer jtag pin pattern
-
+Components
+x	resistor arrays? no
+x	LIPO Fuel gauge? no
 	Make sure USB conn is rated for higher power if we use that
-	LIPO current protection
-	LIPO Fuel gauge?
-
+	LIPO overcurrent protection
 
 	Definitely have to go through the parts list better. NCP177A regulator has active discharge, could be burning lots of current during testing
 	Check quiescent current of p-fet, look for a better one
+
+	Switch to WSON Serial Flash
+		W25Q64FVZP
+		http://ww1.microchip.com/downloads/en/AppNotes/S72030.pdf
+	Switch to high current charger
+		MCP73834-FCI/MF
+	Find better speakers
+
+Schematic
+x	Use one of the deepSleep compatible pins for IMU interrupt
+
+x	Fix schematic note about Vreg - if I actually use it. drop out is <0.11 V for 500mA
+x	mcp73831 HAS to be mcp73831-2
+x	Pullups on volume buttons! internal pullups are crazy low resistance
+x	Footprint for digipot is way off
+x	Don't need test pads for SPI
+x	make a nicer jtag pin pattern
+x	BLE crystal specs on schematic
+x	"not populated" -> "DNP"
+
+	check for internal pull-ups/downs on SWD pins for BLE
+
+	BLE Shutdown?
+	Put PCB Specs on schematic
+	Consistent file names (bottom right)
+	Consistent title locations
+x	Switch to 12 pin FFC
+x	Power switch into FFC
+
+PCB
+	Redo those power input traces
+	Redo audio power traces
+	Array vias for shorter ground path, especially on motor drivers
+	Remove fiducials
+	Center USB
+	Charging LEDs illuminate cavity
+	Move power switch circuit next to USB
+	Fills for power planes
