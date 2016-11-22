@@ -1,46 +1,20 @@
 SF tests to run
 
-values of motor position enum
-values of #define 60000 (does it need to be -u suffix?)
-
 ToDo.
-x	Refactor main code
-x	Trigger extra motors
-x	Battery life function
-x	Shutdown function
-	Volume functions
-
-	Sound files
-
-	Test programming BLE
-	Confirm that we can program mk20 with SWDIO, SWCLK, RST (not TRST)
-	Test analog readings
-
-x	IMU calibration sequence
-
-x	add 33ohm resistors to USB
-x	test serial output - 0 ohm next to lipo charger
-
-x	New module enclosure
-
-x	Test programming M4F over SWD
-x	Understand how to program BLE
-
-x	Replace non-working switches
-x	Remove unneeded programming headers
-x	Solder battery in
-x	Solder to internal regulator
-
-x	Test vreg/powering from battery
+c	Confirm that we can program mk20 with SWDIO, SWCLK, RST (not TRST)
+c	Test analog readings
 
 	Test iOS/BLE
-		See what the data from the app looks like
-		learn how to program the ble module
-		Pass data through BLE to Teensy
+c		Test programming
+c		Upload test chat code
+c		See what the data from the app looks like in code
+c		Pass data through BLE to Teensy
 		Teensy detects new profile and goes into uploading mode
-			Blinking blue LED
+x			Blinking blue LED
 		Sets parameters
-		"Settings updated" Audio
+c		Turn off BLE to save power
+c		check for internal pull-ups/downs on SWD pins for BLE
+			modify schematic if needed
 
 	Audio
 x		Access flash memory
@@ -64,13 +38,14 @@ x			Fix Hardware
 x				Add feedback resistors to other channel
 x				Add cap isolation to input
 x				Cut in- to ground
-			Test audio output
-			Plug in speakers and test audio
-				Store a test file in spi flash
-				Output into speakers
-				Change volume
-			Draw final schematics
-			Update dev notes about audio schematic
+x			Test audio output
+x			Plug in speakers and test audio
+x				Store a test file in spi flash
+x				Output into speakers
+x				Change volume
+x			Draw final schematics
+x			Update dev notes about audio schematic
+			Turn on/off amplifier while playing to save power
 
 		Sound files
 			"Welcome to Swing Forge. Preparing system."
@@ -79,7 +54,7 @@ x				Cut in- to ground
 			Beep for the volume noise
 			Chime2 at end of swing - cycle through phrases? have a "great job" for swings with a low number of errors?
 			Low battery
-			Shutting down
+			"Settings updated" after BLE
 
 		Implement in primary code
 			On wakeup
@@ -88,9 +63,11 @@ x				Cut in- to ground
 			On full swing complete
 			Low battery
 			Shutting down
+			"Settings updated" after BLE
 
 			Changing volume up/down
 			Tune volume up/down speed
+
 
 
 
@@ -108,15 +85,6 @@ x				write test code
 				write calibration code
 				calibrate
 
-	Reducing BOM Cost
-x		Check viability of using M0+ (MKL26Z64VFT4)
-x		Check viability of using NRF81 chip (M0)
-x		Check viability of using NRF82 chip (M4F) $3.95 at q1000
-x		Check BOM breakdown, see where we can reduce cost
-
-	Reducing Power Consumption
-		Turn off BLE to save power?
-		Turn off audio amp to save power
 
 
 	UI!
@@ -129,6 +97,38 @@ x		Check BOM breakdown, see where we can reduce cost
 	As soon as the intro message is complete, all the vibration motors in the vest vibrate in a “vibration symphony” to create the sensation that the body has been scanned.
 	Once calibration is complete, the vest stops vibrating and tells the user: “Your vest calibration is complete”.
 
+
+
+
+	Reducing BOM Cost
+x		Check viability of using M0+ (MKL26Z64VFT4)
+x		Check viability of using NRF81 chip (M0)
+x		Check viability of using NRF82 chip (M4F) $3.95 at q1000
+x		Check BOM breakdown, see where we can reduce cost
+
+
+x	Refactor main code
+x	Trigger extra motors
+x	Battery life function
+x	Shutdown function
+
+x	IMU calibration sequence
+
+x	add 33ohm resistors to USB
+x	test serial output - 0 ohm next to lipo charger
+
+x	New module enclosure
+
+x	Test programming M4F over SWD
+x	Understand how to program BLE
+
+x	Replace non-working switches
+x	Remove unneeded programming headers
+x	Solder battery in
+x	Solder to internal regulator
+
+x	Test vreg/powering from battery
+
 x	Double tap to start swing, vibration/chime to signal starting swing, position feedback starts right away. Chime at full backswing
 x	Single tap to exit swing
 x	Solid green LED while running
@@ -139,7 +139,7 @@ x	Red flash in between breaths for low battery
 
 
 Down the line:
-	Check if the whole thing will run on LC
+x	Check if the whole thing will run on LC
 	MPU calibration values get stored in eeprom, and then read from eeprom at boot and sent to IMU (or just make IMU save them?) for factory cal.
 	make all of the data types in the new imu library consistent
 	Save volume level to spi flash, read at boot
@@ -151,17 +151,19 @@ x	Switch to either MAX98304 (analog in, $0.49) or MAX98357A (I2S in, $1.00)
 Components
 x	resistor arrays? no
 x	LIPO Fuel gauge? no
-	Make sure USB conn is rated for higher power if we use that
 	LIPO overcurrent protection
 
 	Definitely have to go through the parts list better. NCP177A regulator has active discharge, could be burning lots of current during testing
 	Check quiescent current of p-fet, look for a better one
 
-	Switch to WSON Serial Flash
+	Switch Serial Flash to WSON package
 		W25Q64FVZP
 		http://ww1.microchip.com/downloads/en/AppNotes/S72030.pdf
 	Switch to high current charger
 		MCP73834-FCI/MF
+	Add overcurrent protection
+		INA199
+	Make sure USB conn is rated for higher power
 	Find better speakers
 
 Schematic
@@ -176,7 +178,6 @@ x	make a nicer jtag pin pattern
 x	BLE crystal specs on schematic
 x	"not populated" -> "DNP"
 
-	check for internal pull-ups/downs on SWD pins for BLE
 
 	BLE Shutdown?
 	Put PCB Specs on schematic
@@ -194,3 +195,4 @@ PCB
 	Charging LEDs illuminate cavity
 	Move power switch circuit next to USB
 	Fills for power planes
+	Use smd solder pads for chest motor connections

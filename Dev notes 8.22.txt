@@ -56,6 +56,8 @@ Reducing BOM Cost
 			Soft FP vs Hard fp
 			48 Mhz
 			less RAM. Could still be fine.
+		Audio:
+			Teensy Audio library doesn't work, but maybe TMRpcm or other wav libraries will
 
 	Check viability of using NRF81 chip (M0) - NO
 		No DAC or I2S, not enough pins
