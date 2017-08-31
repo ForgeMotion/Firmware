@@ -1,4 +1,5 @@
 // Test all functions
+// This is set up for PCB rev 1.1 (yellow)
 
 const int motors[] = {4,5,6,20,21,22,23};
 const int volUp = 15, volDown = 2, pwrCtrl = 1, battReadPin = A3;
