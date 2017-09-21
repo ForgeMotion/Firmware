@@ -1,19 +1,48 @@
 // Test all functions
-// This is set up for PCB rev 1.1 (yellow)
+/* This is set up for PCB rev 4.2, 9/1/17 (unfinished)
+Pins are updated.
 
-const int motors[] = {4,5,6,20,21,22,23};
-const int volUp = 15, volDown = 2, pwrCtrl = 1, battReadPin = A3;
-const int rgbLed[] = {14,9,10};
-const int csBLE = 16, csFlash = 8;
+List of tests:
+x  2 Volume buttons
+x  Battery sense
+x  RGB Led
+x  7 motor channels
+x  Current monitor
+  IMU
+  Flash memory
+    connect
+    Empty flash
+    Write needed audio files
+  Audio
+    Plays music
+    Change amp gain
+    Change volume with digipot
+    Shutdown audio amp
+  BLE
+    Successful serial config
+    Sleep BLE module
+  Power switch
+    Detect
+    Switch voltage in range
+x    Shutdown
+*/
 
-const int analogResolution = 10;
+const int motors[] = {6,9,10,22,23,25,32};
+const int volUp = 31, volDown = 27;
+const int pwrSwSense = 15, iSense = A11, pwrCtrl = A12, battReadPin = A10;
+const int rgbLed[] = {5,21,20};
+const int csFlash = 1, imuInt = 28;
+const int audioGain = 17, audioShutdown = 16;
 
 void setup() {
   Serial.begin(115200);
   while(!Serial);
 
-  pinMode(volUp, INPUT_PULLUP);
-  pinMode(volDown, INPUT_PULLUP);
+  pinMode(volUp, INPUT);
+  pinMode(volDown, INPUT);
+  pinMode(pwrSwSense, INPUT);
+  pinMode(iSense, INPUT);
+  pinMode(battReadPin, INPUT);
   pinMode(battReadPin, INPUT);
 
   for(int i=0; i<7; i++){
@@ -34,9 +63,13 @@ void setup() {
 
 
   Serial.print("Volume down works. Power supply/battery voltage: ");
-  float voltage = 4.0*3.3*analogRead(battReadPin)/(1023.0);
+  float voltage = 4.3*3.3*analogRead(battReadPin)/(1023.0);
   Serial.print(voltage);
   Serial.println(" volts");
+  Serial.print("Current consumption right now: ");
+  float current = 3.3*analogRead(iSense)/(1023.0);
+  Serial.print(current,3);
+  Serial.println(" amps");
   delay(2000);
   
   Serial.println();
@@ -86,7 +119,6 @@ void setup() {
 
   Serial.println();
   Serial.println("Almost done; about to test shutdown function. ");
-  Serial.println("To do: add audio testing and BLE and SPI Flash testing.");
   delay(1000);
   Serial.println("Shutting down.");
 
@@ -102,3 +134,26 @@ void setup() {
 
 void loop(){ 
 }
+
+/*
+R 64  5
+g 63  21
+b 62  20
+1 61  6
+2 46  9
+3 49  10
+4 44  22
+5 45  23
+6 42  25
+7 41  32
+pwr_ctrl  11  A12
+pwr_sw  43  15
+i_sense 10  A11
+batt sense  9 A10
+vol up  1 31
+vol down  54  27
+audio shdn  35  16
+audio gain  36  17
+imu int 53  28
+flash cs  40  1
+*/

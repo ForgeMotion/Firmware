@@ -1,6 +1,6 @@
 New notes on getting BLE working
 
-The programmer was a bit of a pain in the ass. In the end, I put an older version of the bootloader on it, but it was still finicky.
+The BLE programmer was a bit of a pain in the ass. In the end, I put an older version of the bootloader on it, but it was still finicky.
 To update bootloader, hold the reset button and plug in the programmer, then let go of the button. You should see "bootload.htm" in the folder if it worked. I used the file "CMSIS-DAP_MK20_BLENano.bin". Let the device sit for a minute, maybe the LED blinks change, hard to tell. Unplug it and plug it back in. Twice if you have to.
 
 To upload, copy and paste the binary file into the folder as normal. It should more or less complete the upload, the device will detach and reattach right away. If it doesn't reattach, it didn't upload properly. 
