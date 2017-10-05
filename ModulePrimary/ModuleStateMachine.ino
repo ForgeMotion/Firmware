@@ -45,7 +45,7 @@
 
 // IMU
 	#include <Wire.h>
-  #include <EEPROM.h>
+	#include <EEPROM.h>
 //	#include "I2Cdev.h"
 	#include "inv_mpu.h"
 	#include "inv_mpu_dmp_motion_driver.h"
@@ -68,7 +68,7 @@
 	const uint8_t audioShutdownPin = PROC_PIN_35;
 
 	
-// Time between samples for BLE, battery, volume respectively
+// Time between samples for BLE, battery, volume respectively (ms)
 	uint16_t updateInterval[3] = {2000, 5000, 100};
 	elapsedMillis elapsed[3];
 
@@ -321,7 +321,7 @@ state_t runBLEState(){
 
 	// Audio cue ================================================================================= "Upload complete" || "upload failed, please try again"
 
-	// serial.flush()
+	// Serial.flush()
 	return ST_IDLE;
 }
 
@@ -452,8 +452,8 @@ void initIMU(uint16_t addr, uint8_t interruptPin){
 	dmp_register_tap_cb(tap_cb);
 	dmp_set_tap_thresh(TAP_Z, 250);
 	dmp_set_tap_axes(TAP_Z);
-    // dmp_set_tap_time(100);
-    // dmp_set_tap_time_multi(500);
+	// dmp_set_tap_time(100);
+	// dmp_set_tap_time_multi(500);
 }
 
 uint8_t tapData[] = {0,0};

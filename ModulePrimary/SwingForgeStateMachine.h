@@ -40,11 +40,11 @@ typedef void transition_func_t();
 // Store transition functions in lookup table (can be NULL even for valid transitions, can be duplicates)
 transition_func_t * const transitionTable[NUM_STATES][NUM_STATES] = {
 // Current State: 
-//  Idle        Backswing         Frontswing    BLE       // New State (down)
-  {NULL,        goSwingToIdle,      goSwingToIdle,  goBLEToIdle },  // Idle
-  {goIdleToBackswing, NULL,         NULL,     NULL    },  // Backswing
-  {NULL,        goBackswingToFrontswing,NULL,     NULL    },  // Frontswing
-  {goToBLE,     goToBLE,        goToBLE,    NULL    },  // BLE
+// Idle					Backswing				Frontswing		BLE				// New State (down)
+  {NULL,				goSwingToIdle,			goSwingToIdle,	goBLEToIdle	},	// Idle
+  {goIdleToBackswing, 	NULL,					NULL,			NULL		},	// Backswing
+  {NULL,				goBackswingToFrontswing,NULL,			NULL		},	// Frontswing
+  {goToBLE,				goToBLE,				goToBLE,		NULL		},	// BLE
 };
 
 
@@ -55,6 +55,6 @@ state_t runState(state_t curState) {
   transition_func_t *transition = transitionTable[newState][curState];
   if(transition) transition();
 
-    return newState;
+	return newState;
 }
 #endif
