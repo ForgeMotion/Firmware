@@ -33,7 +33,8 @@
 		{PROC_PIN_44, MOTOR_POS_SIDE_L},
 		{PROC_PIN_45, MOTOR_POS_SIDE_R}
 	};
-//	RGBMood 
+
+// RGBMood 
 
 // User settings
 	float angleLimits[] = {6.0,-6.0,-7.0,7.0,25.0,25.0};	// [PitchFwd,PitchBack,YawL,YawR,RollBack,RollFwd]
@@ -61,9 +62,6 @@
 	#include <Snooze.h>
 	SnoozeBlock config;
 
-// BLE
-
-
 // Audio and serial flash
 	#include <Audio.h>
 	// #include <Wire.h> // required, but already included
@@ -81,7 +79,12 @@
 	AudioConnection		patchCord1(playMp31, 0, mixer1, 0);
 	AudioConnection		patchCord2(playMp31, 1, mixer1, 1);
 	AudioConnection		patchCord3(mixer1, dac1);
-	
+
+	// digital potentiometer controls the volume
+	const uint8_t wiperPosFromVol[16] = {0,3,9,18,28,41,56,72,90,109,130,152,176,201,227,255};
+	uint8_t sfVolume = 7; // 0-15
+	MAX5395 digipot();
+
 // Time between samples for BLE, battery, volume respectively (ms)
 	uint16_t updateInterval[3] = {2000, 5000, 100};
 	elapsedMillis elapsed[3];
@@ -92,6 +95,12 @@ void setup(){
 	// Allocate memory
   	AudioMemory(8);
 
+  	// Prepare pins, set audio amp gain, shut down amp
+  	pinMode(audioShutdownPin, OUTPUT);
+  	digitalWrite(audioShutdownPin, LOW);
+  	// pinMode(audioGainPin, OUTPUT); // Disabled = 0dB
+  	// digitalWrite(audioGainPin, HIGH); // 6dB
+
 	//Set Volume to max - levels must add to <=1 
 	mixer1.gain(0, 0.5);
 	mixer1.gain(1, 0.5);
@@ -99,9 +108,14 @@ void setup(){
 	// Start communication to flash memory
 	if (!SerialFlash.begin(flashCSPin)) {
 		DEBUG_PRINTLN("Cannot access SPI Flash chip");
-		delay (1000);
+		delay(1000);
 		completeShutdown();
 	}
+
+	// Initialize volume control digipot
+	if(!Wire) Wire.begin();
+	digipot.setAddrFromPinState(low);
+	digipot.setChargePumpStatus(false);	// Disable charge pump to reduce current
 
 // Initialize debug bus
 	Serial.begin(115200);
@@ -119,7 +133,7 @@ void setup(){
 	}
 
 // Initialize IMU
-	Wire.begin();
+	if(!Wire) Wire.begin();
 
 	initIMU(0x68, imuIntPin);
 	dmp_set_tap_count(2);
@@ -176,9 +190,11 @@ void setup(){
 
 void loop(){
 	if(currentState != ST_BLE_PROGRAMMING){
+		// If audio stopped, turn off amplifier
+		if(!playMp31.isPlaying()) digitalWriteFast(audioShutdownPin, LOW);
+
 		// Update pin readings
 		for(int i=0; i<2; i++) volSw[i].update();
-
 
 		// Check for BLE connection and data
 		if(elapsed[0] > updateInterval[0]){
@@ -450,24 +466,49 @@ void printStatus(){
 }
 
 void playAudioFile(const char *filename, bool block = false){
-  SerialFlashFile ff = SerialFlash.open(filename);
-  DEBUG_PRINT("Playing file: ");
-  DEBUG_PRINTLN(filename);
+	// enable audio amp, takes 4ms to boot
+	digitalWriteFast(audioShutdownPin, HIGH);
 
-  uint32_t sz = ff.size();
-  uint32_t pos = ff.getFlashAddress();
+	// creat file object
+	SerialFlashFile ff = SerialFlash.open(filename);
+	DEBUG_PRINT("Playing file: ");
+	DEBUG_PRINTLN(filename);
 
-  // Start playing the file, non-blocking
-  playMp31.play(pos,sz);
+	// get size and position of file
+	uint32_t sz = ff.size();
+	uint32_t pos = ff.getFlashAddress();
 
-  // Simply wait for the file to finish playing.
-  while (block && playMp31.isPlaying()) {}
+	// Start playing the file, non-blocking
+	playMp31.play(pos,sz);
+
+	// Wait for the file to finish playing
+	while (block && playMp31.isPlaying()) {}
 }
 
-void changeVolume(bool up){ // ====================================
 
+void changeVolume(bool up){
+	uint8_t temp = sfVolume;
+
+	// Restrict volume to limits
+	if(up && sfVolume != 15)
+		sfVolume++;
+	else if(!up && sfVolume != 0)
+		sfVolume--;
+
+	// only change settings if volume changed
+	if(sfVolume != temp){
+		// If muted, we must shut down digipot
+		if(sfVolume == 0){
+			digipot.shutdown(high, reg);
+		} else if(digipot.isShutdown()) {
+			// if digipot is shut down, we must restart it and set volume
+			digipot.clearShutdown();
+			digipot.setWiperPosition(wiperPosFromVol[sfVolume]);
+		}
+	}
+
+	// Play volume indicator sound
 	playAudioFile("volumebup.mp3");
-
 }
 
 // ==================================== IMU Helper functions ====================================

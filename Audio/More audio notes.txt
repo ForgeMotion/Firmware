@@ -100,3 +100,30 @@ Audio Calculations:
 	2.828/1.25 = 2.263 V/V = 7 dB
 
 	using 6dB, Vp = 2.5, Vpp = 5, Prms = 0.78W
+
+
+10/8:
+	Revising the audio code.
+
+	So, we have a voltage signal from the DAC going to a digipot (total resistance = Rt) to a resistor (R3) to gnd to the amp.
+	The voltage going into the amp is Vo = Vi * P*R3/(Rt*P*(1-P)+R3), where P is the percentage of the position of the digipot wiper.
+	Basically though, when R3 is sufficiently large (5xRt), this simplifies to Vo=Vi*P. For some reason I spec'd a 100k resistor with a 10k digipot, so the voltage is nearly perfectly linear with wiper position.
+
+	Now, I only really care that the perceived loudness of the speakers is linear. So I investigated what happens with that. Per (https://geoffthegreygeek.com/amplifier-power/) perceived loudness is:
+		L = 2^(dB/10)
+
+		dB = 10*log((V2/V1)^2)
+		L = 2^(log((V2/V1)^2)) = (V2/V1)^(2*log(2)/log(10)) ~= (V2/V1)^0.602
+
+	Combined:
+		V/Vi = P (from 0 to 1, so Vi = Vmax, corresponds to Lmax)
+		L/Lmax ~= (V2/V1)^0.602 = P^0.602
+		P ~= (L/Lmax)^1.661
+
+
+	The goal is to have discrete volume levels that are evenly spaced. Android has 16 levels, including mute and max, so let's start there.
+
+	Divide the loudness range (typically from 0-100%) into N steps.
+	Then, use P = L^1.661 to convert this into percent wiper position.
+	Then round this to get the actual wiper positions for each step.
+	const uint8_t wiperPosFromVol[16] = {0,3,9,18,28,41,56,72,90,109,130,152,176,201,227,255};
