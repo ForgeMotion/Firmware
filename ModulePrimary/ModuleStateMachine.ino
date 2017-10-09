@@ -46,7 +46,7 @@
 // IMU
 	#include <Wire.h>
 	#include <EEPROM.h>
-//	#include "I2Cdev.h"
+	// #include "I2Cdev.h"
 	#include "inv_mpu.h"
 	#include "inv_mpu_dmp_motion_driver.h"
 	#include "quaternionMath.h"
@@ -65,8 +65,22 @@
 
 
 // Audio and serial flash
-	const uint8_t audioShutdownPin = PROC_PIN_35;
+	#include <Audio.h>
+	// #include <Wire.h> // required, but already included
+	#include <SPI.h>
+	#include <SerialFlash.h>
+	#include "play_sd_mp3.h"
 
+	// Shutdown is active low, gain NC = 0db, HIGH = 6dB, LOW = 12dB
+	const uint8_t audioShutdownPin = PROC_PIN_35, audioGainPin = PROC_PIN_36;
+	const uint8_t flashCSPin = PROC_PIN_40;
+
+	AudioPlaySdMp3		playMp31;
+	AudioMixer4			mixer1;
+	AudioOutputAnalog	dac1;
+	AudioConnection		patchCord1(playMp31, 0, mixer1, 0);
+	AudioConnection		patchCord2(playMp31, 1, mixer1, 1);
+	AudioConnection		patchCord3(mixer1, dac1);
 	
 // Time between samples for BLE, battery, volume respectively (ms)
 	uint16_t updateInterval[3] = {2000, 5000, 100};
@@ -74,6 +88,21 @@
 
 
 void setup(){
+// Initialize audio
+	// Allocate memory
+  	AudioMemory(8);
+
+	//Set Volume to max - levels must add to <=1 
+	mixer1.gain(0, 0.5);
+	mixer1.gain(1, 0.5);
+
+	// Start communication to flash memory
+	if (!SerialFlash.begin(flashCSPin)) {
+		DEBUG_PRINTLN("Cannot access SPI Flash chip");
+		delay (1000);
+		completeShutdown();
+	}
+
 // Initialize debug bus
 	Serial.begin(115200);
 
@@ -102,16 +131,6 @@ void setup(){
 	// bias = 0;
 	// for(int i=0; i<4; i++) bias = (bias << 8) | EEPROM.read(accelBiasStart+i);
 	// dmp_set_accel_bias(bias);
-
-// Initialize serial flash
-
-
-// Initialize audio
-	pinMode(audioShutdownPin, OUTPUT);
-	digitalWriteFast(audioShutdownPin, LOW);
-
-	DEBUG_PRINTLN("Hello. Welcome to Swing Forge.");
-	// Welcome audio file
 
 // Prepare motors
 	for(int i=0; i<NUM_MOTORS; i++) motor[i].init();
@@ -148,7 +167,8 @@ void setup(){
 	tapDetected = false;
 	for(int i=0; i<3; i++) elapsed[i] = 0;
 
-	// Audio cue =================================================================================
+	DEBUG_PRINTLN("Hello. Welcome to Swing Forge.");
+	playAudioFile("1welcome.mp3");
 	rgb.setRGB(Color::WHITE);
 }
 
@@ -173,8 +193,8 @@ void loop(){
 
 			uint8_t battPercent = getBatteryLife(battSensePin, battDivider);
 			if(battPercent < 20) rgb.setMode(RGBMood::FIRE_MODE);
-			else if(battPercent < 5){
-				// Audio cue =================================================================================
+			else if(battPercent < 10){
+				playAudioFile("5batteryisdownto10p.mp3");
 				completeShutdown();
 			}
 		}
@@ -227,7 +247,9 @@ void goIdleToBackswing(){
 		rgb.setFadingSpeed(40);
 	}
 	rgb.tick();
-	// Audio cue =================================================================================
+
+	if(feedbackEnable & (1<<4)) 
+		playAudioFile("0chime1.mp3");
 
 	dmp_enable_feature(DMP_FEATURE_TAP | DMP_FEATURE_6X_LP_QUAT);
 	// dmp_set_tap_count(1);
@@ -265,7 +287,8 @@ state_t runBackswingState(){
 }
 
 void goBackswingToFrontswing(){
-	if(feedbackEnable & (1<<4)) // Audio cue =================================================================================
+	if(feedbackEnable & (1<<4)) 
+		playAudioFile("0chime1.mp3");
 
 	if(rgb.mode_ != RGBMood::FIRE_MODE) {
 		// speed up the light effects!
@@ -299,8 +322,8 @@ state_t runFrontswingState(){
 void goSwingToIdle(){
 	turnOffMotors();
 
-	// if(swingSuccess && feedbackEnable & (1<<5)) // Audio cue =================================================================================
-	// else // Audio cue =================================================================================
+	if(feedbackEnable & (1<<5)) 
+		playAudioFile("0chime1.mp3");
 
 	if(rgb.mode_ != RGBMood::FIRE_MODE){
 		rgb.setMode(RGBMood::RAINBOW_HUE_MODE);
@@ -314,12 +337,13 @@ void goSwingToIdle(){
 }
 
 state_t runBLEState(){
-	// Audio cue ================================================================================= "New settings uploading"
-
 	// Process serial data into new settings
+
+	// Update light effects
 	rgb.tick();
 
-	// Audio cue ================================================================================= "Upload complete" || "upload failed, please try again"
+	// Audio: "Upload complete" || "upload failed, please try again"
+	playAudioFile("4settingssuccessupdated.mp3");
 
 	// Serial.flush()
 	return ST_IDLE;
@@ -389,12 +413,6 @@ void completeShutdown(){
 	digitalWriteFast(killPin, LOW);
 }
 
-void changeVolume(bool up){ // ====================================
-
-	// Audio cue =================================================================================
-
-}
-
 void updateMotors(uint8_t motorSpeed){
 	if(feedbackEnable & (1<<0)) motor[MOTOR_POS_FRONT].setSpeed(		(YPRdev[1] > angleLimits[0]) * motorSpeed);
 	if(feedbackEnable & (1<<1)) motor[MOTOR_POS_BACK_TOP].setSpeed(		(YPRdev[1] < angleLimits[1]) * motorSpeed);
@@ -431,6 +449,26 @@ void printStatus(){
 	DEBUG_PRINT("  ");
 }
 
+void playAudioFile(const char *filename, bool block = false){
+  SerialFlashFile ff = SerialFlash.open(filename);
+  DEBUG_PRINT("Playing file: ");
+  DEBUG_PRINTLN(filename);
+
+  uint32_t sz = ff.size();
+  uint32_t pos = ff.getFlashAddress();
+
+  // Start playing the file, non-blocking
+  playMp31.play(pos,sz);
+
+  // Simply wait for the file to finish playing.
+  while (block && playMp31.isPlaying()) {}
+}
+
+void changeVolume(bool up){ // ====================================
+
+	playAudioFile("volumebup.mp3");
+
+}
 
 // ==================================== IMU Helper functions ====================================
 void initIMU(uint16_t addr, uint8_t interruptPin){
