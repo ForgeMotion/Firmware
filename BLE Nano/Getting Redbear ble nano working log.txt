@@ -1,0 +1,20 @@
+	Trying to get this BS to upload
+	I did manage to get the MK20 firmware updated
+		Plug in while holding reset button, drag firmware (.bin) onto chip. copy is successful. Board resets
+
+	Went through all of these questions:
+		https://developer.mbed.org/questions/related/72/78/RedBearLab-BLE-Nano/?page=3
+
+	Went through all of the zendesk questions
+		This guy had the same issue on one BLE nano, they recommended replacing it. my issue is with both nanos and the programmer
+		https://redbearlab.zendesk.com/entries/83267445-BLE-Nano-on-Mk20-not-updating
+
+		This person had the exact same issue, and oem recommended checking data connections
+		https://redbearlab.zendesk.com/entries/82084999-problem-uploading-bootloader-to-BLE-nano-MK20-board
+
+		Also the same issue, though could just be the fixed bug on mac os x. Anyway, seems like the bug is hardware independent - persists after replacement
+		https://redbearlab.zendesk.com/entries/74613939-SWD-error-trying-to-upload-any-firmware
+
+		Possibly the same issue (though he gets fail.txt, SWD ERROR), solution may have been better soldering
+		https://redbearlab.zendesk.com/entries/81815775-Defective-BLE-Nanos-SWD-ERROR
+		

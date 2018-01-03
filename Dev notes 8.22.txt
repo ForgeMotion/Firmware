@@ -1,0 +1,79 @@
+Dev notes 8.22
+
+Audio
+	Filenames are always uppercase 8.3 format
+	Looks like files will can be raw, or mp3 if mp3 library is added
+	Need to look at memory consumption once its running and alloc only what's needed
+
+	Ok, we're going to use the SerialFlash library, which has an audio to DAQ example (MP3Player.ino)
+	It also has a python script to send data to the teensy, and a sketch to pass the data onto the flash chip (CopyFromSerial.ino)
+
+	Got successful erase and read/write from flash memory - for yellow PCB, had to add following to both erase and r/w examples:
+		SPI.setMOSI(11);
+		SPI.setMISO(12);
+
+Tap Detection
+	See Tap detection dev notes 9.8.c
+
+Merging MPU6050 library changes:
+	The MPU calibration code that someone wrote a while ago, someone figured out the bugs and posted about it. Saving a current version and then I'll build in their changes and test it. (done)
+
+	Latest lib uses MPU6050_DMP_FIFO_RATE_DIVISOR to set dmp read frequency (f = 200Hz/(1+MPU6050_DMP_FIFO_RATE_DIVISOR)), I used MPU6050_DMP_FIFO_RATE_DIVISOR = 0x03 in last version, so that will need to be in the new main code
+	Added in the proper euler equation, using an ifdef for a quick reversion
+	Added in the getNorm function (unsure if it was ever used)
+
+
+Full System factory calibration
+	The hardware test sketch needs to be updated
+	it should get calibration values for the IMU and save them to eeprom
+	main code should pull them from eeprom on boot
+
+Reducing BOM Cost
+	Check viability of using M0+ (MKL26Z64VFT4)
+		Pins:
+			Has DAC and I2S
+			Need:
+				7 PWM for motors
+				3 for RGB (preferrably PWM)
+				2 pin for I2C
+				3 for SPI
+				2 for SPI CS pins
+
+				Analog in for battery
+				4 digital in (Vol_up, Vol_down, MPU_INT, AUDIO_SHDN)
+				1 DAC or 3 I2S (mono or stereo - uses SHDN pin)
+
+				=10 pwm, 2 i2c, 3 spi, 1 analog, 6 gpio, 1-3 audio
+			Has:
+				Analog
+				10 PWM
+				27 pins broken out, maybe 3 more usable on chip
+				27 - 3(spi) - 2*(i2c) - 10(pwm) = 10 pins
+				totally fine!
+		Code size:
+			Has to be under 62 kbyte
+		Speed:
+			Soft FP vs Hard fp
+			48 Mhz
+			less RAM. Could still be fine.
+		Audio:
+			Teensy Audio library doesn't work, but maybe TMRpcm or other wav libraries will
+
+	Check viability of using NRF81 chip (M0) - NO
+		No DAC or I2S, not enough pins
+
+	Check viability of using NRF82 chip (M4F) $3.95 at q1000 - YES
+		Has I2S and DAC, has plenty of PWM (12) and pins
+	Check BOM breakdown, see where we can reduce cost
+		Cheaper BLE crystal
+		Cheaper USB conn - 10118192-0001LF could work
+
+BLE
+	How to program BLE
+		Has SWD, can use my J-Link thing
+			Set to nRF51822_xx??
+				 Flash RAM
+				AA 256 16
+				AB 128 16
+				AC 256 32
+		Can also run wires from the Redbear programmer board to SWDIO/SWCLK? (test - may need other pins connected as well)

@@ -1,0 +1,62 @@
+New notes on getting BLE working
+
+The BLE programmer was a bit of a pain in the ass. In the end, I put an older version of the bootloader on it, but it was still finicky.
+To update bootloader, hold the reset button and plug in the programmer, then let go of the button. You should see "bootload.htm" in the folder if it worked. I used the file "CMSIS-DAP_MK20_BLENano.bin". Let the device sit for a minute, maybe the LED blinks change, hard to tell. Unplug it and plug it back in. Twice if you have to.
+
+To upload, copy and paste the binary file into the folder as normal. It should more or less complete the upload, the device will detach and reattach right away. If it doesn't reattach, it didn't upload properly. 
+
+
+Ok, I modified the arduino "MultiSerial" example to try and figure out how the chat works.
+The example uses Serial.read and .write, but print seems to work fine too
+Baud to the BLE has to be 9600 (but can be changed in the mbed firmware)
+
+If I send a message to the BLE like "test" followed by 0xD, 0xA (carriage return, line feed), BLE responds with:
+RecHandler 
+Length: 
+
+Where  = 0x6... Which means everything is sent as ASCII except that number, which is sent as a byte
+
+The message arrived in the bluetooth app as "test" CR LF, which is nice
+
+Receiving messages from the android app:
+When I wrote "test
+" (new line added at the end)
+I received:
+WriteHandler 
+Length: 
+Data: test
+
+
+I also added a couple more new lines, and everything showed up verbatim:
+WriteHandler 
+Length: 
+Data: test
+
+test n
+
+n
+
+
+Hard to say what the app is doing though, so time to try the ios app.
+Well, it won't open on the phone. Not sure why. Going to connect it to xcode and see if that helps.
+
+
+OK. So it took a while to get xcode installed
+Getting the same issues as last I worked on this (3.14.17):
+Need a dev account, a provisioning profile and code signing. I found some work around last time.
+Alrighty, trying stuff. I went to Xcode (top left), preferences, accounts, add account and signed in to my apple account, got rid of one error
+If you click on the project name in the left view, it brings up "the build settings editor". Here you set the provisioning profile to Automatic, seems to have fixed the last two compile issues. 
+
+Here's what BLE sent out after the iPhone sent the settings over:
+WriteHandler 
+Length: 
+Data: ÿSPPP<(~
+WriteHandler 
+Length: 
+Data: ÿSPPP<(~
+
+ÿSPPP<(~
+255 083 080 080 080 060 040 126
+
+These are the values of:
+0xff, fwd, bwd, right, left, backswing, end swing, bools for limits on/off and handedness	
